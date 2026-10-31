@@ -1,4 +1,5 @@
 //! Helpers shared by the stream tests.
+#![allow(dead_code)] // each test crate uses a different subset
 use std::io::Read;
 
 /// A reader that returns 1..=`max` random bytes per `read` call (never more than asked), like a slow pipe.

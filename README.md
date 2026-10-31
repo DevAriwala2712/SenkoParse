@@ -61,7 +61,7 @@ Details, raw runs and caveats (this is one query, the data is a reconstruction, 
 cargo test                                          # fast: unit-style + small differential tests vs SQLite
 cargo test --release --test difftest -- --ignored  # large randomized differential test (env: DIFFTEST_SEED/ROWS/QUERIES)
 ```
-Each random query runs on three file-mode configurations (default parallel, `--no-opt` reference, 3 threads with 256-byte chunks) and two stream configurations (the FROM table fed through a reader that returns 1-300 random bytes per read, 37-byte blocks, default and `--no-opt`) and must match SQLite. Queries that hit a documented streaming limit are skipped and counted. `tests/stream.rs` compares stream mode with file mode for tiny blocks, byte-at-a-time reads, quoted newlines, CRLF, BOM, blank lines, empty input, joins, error text and `LIMIT` on endless input.
+Each random query runs on three file-mode configurations (default parallel, `--no-opt` reference, 3 threads with 256-byte chunks) and two stream configurations (the FROM table fed through a reader that returns 1-300 random bytes per read, 37-byte blocks, default and `--no-opt`) and must match SQLite. Queries that hit a documented streaming limit are skipped and counted. The large `--ignored` run is now slow (about 20 minutes per seed, because of the 37-byte stream blocks); only seed 1000 has been run so far (1500 queries, passed). `tests/stream.rs` compares stream mode with file mode for tiny blocks, byte-at-a-time reads, quoted newlines, CRLF, BOM, blank lines, empty input, joins, error text and `LIMIT` on endless input.
 
 ## Status (M1 and M2 done)
 | | |
