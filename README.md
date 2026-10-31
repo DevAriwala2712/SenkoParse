@@ -30,7 +30,8 @@ Each random query runs on three configurations (default parallel, `--no-opt` ref
 |---|---|
 | Correct vs SQLite | yes: differential tests green on every configuration |
 | 1e7 rows, 11 threads, warm cache (M3 Pro) | scans/aggregates/small joins 0.13-0.22 s (2.5-4.2 GB/s) |
-| Known slow | `GROUP BY` with ~6e6 groups 1.29 s (0.28 s of it writing 6.3M rows; the merge is a serial tail, see EXP-004); 1e7 x 1e7 join 1.44 s (next: EXP-005) |
+| 6.3e6 groups | `GROUP BY` 0.67 s (was 2.5 s in M1; about 0.28 s of it is writing 6.3M rows), EXP-004 |
+| Known slow | 1e7 x 1e7 join 1.5 s: the hash table is built serially (next: EXP-005) |
 | Not measured | cold cache, DuckDB comparison (DuckDB not installed), spill to disk (not implemented) |
 
 Full tables: [`BENCHMARKS.md`](BENCHMARKS.md). Reproduce with `python3 bench/run.py --rows 1e7`.

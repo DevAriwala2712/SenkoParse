@@ -155,7 +155,7 @@ Each step: write the failing test first, implement, difftest (both paths), bench
 | Re-measure + profile | [EXP-001](../experiments/001-baseline-breakdown.md) | Done (warm only; cold needs `sudo purge`) | Finding 1 and 2 confirmed; new: `from_utf8` waste in float parse |
 | Idea 1 quote-free fast path | [EXP-002](../experiments/002-quote-free-fast-path.md) | Done | 2.1-2.5x only when early columns are read; gate `SUM(id1)` < 0.3 s met barely (0.295) |
 | Ideas 2+3 parallel chunks, ordered merge | [EXP-003](../experiments/003-parallel-chunked-scan.md) | Done | 5.1-5.9x on 11 threads; byte-identical across thread counts |
-| Idea 5 + 4 integer-key table, partitioned aggregation | [EXP-004](../experiments/004-integer-key-aggregation.md) | Part A + output formatting done; partition-wise merge being evaluated on a branch | `GROUP BY id3` 2.28 -> 1.29 s at 11 threads (target < 1 s not yet met); serial merge tree = 0.78 s |
+| Idea 5 + 4 integer-key table, partitioned aggregation | [EXP-004](../experiments/004-integer-key-aggregation.md) | Done (merged) | `GROUP BY id3` 2.5 s (M1) -> 0.67 s at 11 threads, target < 1 s met; the serial merge tree (0.78 s) was removed by partition-wise merge |
 | Idea 6 dense-key array join / parallel build | EXP-005 | Next | join with `big`: 1.46 s now, target < 1 s |
 | DuckDB reference numbers | n/a | Blocked: needs permission to install | |
 | Idea 7 late materialization, M4 | n/a | Not started | |
