@@ -6,3 +6,4 @@ target/
 .claude/worktrees/
 /.demo-data/
 /.demo-venv/
+/*.whl
