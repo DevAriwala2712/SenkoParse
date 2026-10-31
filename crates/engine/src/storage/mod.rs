@@ -1,6 +1,8 @@
 //! Catalog (schema.toml) and CSV storage.
 pub mod csv;
 
+pub use csv::stream::StreamInput;
+
 use crate::types::Ty;
 use crate::{err, Result};
 use std::collections::HashMap;

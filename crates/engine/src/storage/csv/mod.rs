@@ -12,10 +12,20 @@ use std::path::Path;
 use rayon::prelude::*;
 use std::sync::Arc;
 
+pub mod stream;
+
 pub const BATCH_ROWS: usize = 64 * 1024;
 
+/// Bytes a reader scans: a memory map (file mode) or an owned block (stream mode).
+pub type Data = Arc<dyn AsRef<[u8]> + Send + Sync>;
+
+#[inline]
+fn bytes(d: &Data) -> &[u8] {
+    AsRef::<[u8]>::as_ref(&**d)
+}
+
 pub struct CsvReader {
-    mmap: Arc<Mmap>,
+    data: Data,
     /// Exclusive end of this reader's byte range; always a row start or the end of the file.
     end: usize,
     pos: usize,
@@ -245,7 +255,7 @@ impl Builder {
 
 /// An opened, header-parsed CSV file that can be read whole or in independent row-aligned chunks.
 pub struct CsvSource {
-    mmap: Arc<Mmap>,
+    data: Data,
     data_start: usize,
     ncols: usize,
     wanted: Vec<Option<usize>>,
@@ -268,7 +278,13 @@ impl CsvSource {
         let mmap = unsafe { Mmap::map(&file) }.map_err(|e| err!("cannot mmap {pstr}: {e}"))?;
         #[cfg(unix)]
         let _ = mmap.advise(memmap2::Advice::Sequential);
-        let d: &[u8] = &mmap;
+        Self::from_data(Arc::new(mmap), table, needed, reference, pstr)
+    }
+
+    /// Parse the header at the start of `data` (file mode: the whole map; stream mode: the first block).
+    /// `label` names the input in error messages (the file path, or `<stdin>`).
+    pub fn from_data(data: Data, table: &TableDef, needed: &[usize], reference: bool, pstr: String) -> Result<CsvSource> {
+        let d: &[u8] = bytes(&data);
         let mut pos = if d.starts_with(&[0xEF, 0xBB, 0xBF]) { 3 } else { 0 };
         let mut header = Vec::new();
         loop {
@@ -299,27 +315,37 @@ impl CsvSource {
             return Err(err!("{pstr}: schema column '{}' missing from header", table.cols[si].0));
         }
         let outs = needed.iter().map(|&i| table.cols[i].clone()).collect();
-        Ok(CsvSource { mmap: Arc::new(mmap), data_start: pos, ncols: header.len(), wanted, outs, path: pstr, reference })
+        Ok(CsvSource { data, data_start: pos, ncols: header.len(), wanted, outs, path: pstr, reference })
     }
 
     pub fn len(&self) -> usize {
-        self.mmap.len()
+        bytes(&self.data).len()
+    }
+
+    pub fn data_start(&self) -> usize {
+        self.data_start
     }
 
     /// Reader over rows in `[start, end)`; both must be row starts (or the end of the file).
     pub fn reader(&self, start: usize, end: usize) -> CsvReader {
-        let d: &[u8] = &self.mmap;
+        self.reader_on(self.data.clone(), start, end, 0)
+    }
+
+    /// Reader over `data[start..end]` (same header layout as this source); `row0` = data rows already read
+    /// before this range, so error messages carry the global row number.
+    pub fn reader_on(&self, data: Data, start: usize, end: usize, row0: u64) -> CsvReader {
+        let d: &[u8] = bytes(&data);
         // One SIMD pass for a quote byte; stops at the first hit, so ranges with quotes pay almost nothing.
         let quote_free = !self.reference && memchr(b'"', &d[start.min(end)..end]).is_none();
         let last_needed = self.wanted.iter().rposition(|w| w.is_some());
         CsvReader {
-            mmap: self.mmap.clone(),
+            data,
             end,
             pos: start,
             ncols: self.ncols,
             wanted: self.wanted.clone(),
             outs: self.outs.clone(),
-            row: 0,
+            row: row0,
             path: self.path.clone(),
             quote_free,
             last_needed,
@@ -327,7 +353,7 @@ impl CsvSource {
     }
 
     pub fn whole(&self) -> CsvReader {
-        self.reader(self.data_start, self.mmap.len())
+        self.reader(self.data_start, self.len())
     }
 
     /// Split the data region into row-aligned ranges of about `chunk_bytes` each.
@@ -339,7 +365,7 @@ impl CsvSource {
     /// that starting state to the first newline outside quotes. The result depends only on the file and
     /// `chunk_bytes`, never on the number of threads.
     pub fn plan_chunks(&self, chunk_bytes: usize) -> Vec<(usize, usize)> {
-        let d: &[u8] = &self.mmap;
+        let d: &[u8] = bytes(&self.data);
         let (start, len) = (self.data_start, d.len());
         if start >= len {
             return vec![];
@@ -398,11 +424,16 @@ fn row_start_at_or_after(d: &[u8], cand: usize, inside0: bool) -> usize {
 }
 
 impl CsvReader {
+    /// Data rows consumed so far (blank lines excluded), for carrying the row number across stream blocks.
+    pub fn rows(&self) -> u64 {
+        self.row
+    }
+
     pub fn next_batch(&mut self) -> Result<Option<crate::types::Batch>> {
         if self.quote_free {
             return self.next_batch_quote_free();
         }
-        let d: &[u8] = &self.mmap[..self.end];
+        let d: &[u8] = &bytes(&self.data)[..self.end];
         if self.pos >= d.len() {
             return Ok(None);
         }
@@ -464,7 +495,7 @@ impl CsvReader {
     /// fields are never parsed: the comma count of every line is checked (SIMD-friendly), and only the
     /// fields up to the last needed column are located and parsed.
     fn next_batch_quote_free(&mut self) -> Result<Option<crate::types::Batch>> {
-        let d: &[u8] = &self.mmap[..self.end];
+        let d: &[u8] = &bytes(&self.data)[..self.end];
         if self.pos >= d.len() {
             return Ok(None);
         }
