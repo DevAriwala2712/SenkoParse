@@ -1,6 +1,6 @@
 # EXP-004: Integer-key group table (and, if needed, partitioned aggregation)
 
-- **Status:** Part A and 4b done (2026-10-31); Part B (partition-wise merge) is being evaluated on branch `exp/004-partitioned-merge`
+- **Status:** In progress (Part A and output formatting done; Part B hypothesis below, written before its code, 2026-10-31)
 - **Idea:** ADR-0001 Idea 5 (inline integer keys, no per-row allocation), then Idea 4 (partitioned aggregation) only if needed
 - **Machine:** Apple M3 Pro, 11 cores (5P + 6E), 18 GiB, macOS, warm page cache
 
@@ -63,3 +63,20 @@ Hypothesis: writing numbers straight into the output buffer removes the per-cell
 Result (raw: [data/exp004b-after-output.md](data/exp004b-after-output.md)): full `GROUP BY id3` 1.644 -> **1.289 s** (output share 0.64 -> ~0.28 s); zero-row variant unchanged at 1.008 s.
 Float formatting itself (shortest round-trip, `core::fmt`) remains; a faster algorithm would need a dependency (not added).
 Tests: new `output_formatting_of_numbers_and_dates` (extreme integers, scales 0/2/18, negative decimals, dates before 1970).
+
+## Part B: partition-wise parallel merge (hypothesis, written before the code)
+ADR-0001 Idea 4 proposed radix-partitioning rows before aggregation. The phase timers show the build is already cheap and parallel (0.18 s)
+and only the merge is serial, so a smaller change targets the measured cost: keep per-chunk tables, but merge them **by key partition in parallel**.
+Each table buckets its groups into 64 hash partitions; partition `p` is merged by one task that walks the tables in chunk order and folds in only
+its own groups; partitions are independent, so there is no serial tail. Output is emitted partition by partition, no concatenation.
+- Prediction: merge 0.78 s -> about 0.15-0.25 s on 11 threads (the 8 -> 11 thread scaling seen in EXP-003 suggests ~5x, not 11x).
+  Whole `GROUP BY id3` (with output) 1.29 s -> **under 0.8 s**; the zero-row variant 1.0 s -> about 0.45 s.
+- **Kill threshold:** if the zero-row variant is not under 0.7 s, revert (the complexity is not worth it).
+- Used only when the per-chunk tables hold more than 262,144 groups in total and the key is a single integer-like column; otherwise the existing
+  tree merge runs, so low-cardinality queries are untouched. Strings and multi-column keys keep the tree merge (known limitation).
+- Determinism: the partition count and function are fixed and each partition folds chunks in index order, so results are identical for any thread count.
+  **Trade-off, stated up front:** the *order of groups* in unordered results becomes partition order (still thread-independent) instead of first-seen
+  order when this path is taken. SQL gives no order guarantee without `ORDER BY`; tests that compare against the reference order will force this path and compare as multisets.
+- Float sums in this path are folded sequentially in chunk order (tree merge is pairwise), so the exact last bits can differ between the two strategies; each is deterministic.
+- Tests first: an option to force the path (`agg_partition_groups`), the stress configuration of the difftest uses it, plus a dedicated test with
+  5,000+ keys, NULLs, decimals and dates at several chunk sizes and thread counts.
