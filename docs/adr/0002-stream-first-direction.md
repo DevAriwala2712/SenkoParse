@@ -23,7 +23,7 @@ our benchmark machine yet (`BENCHMARKS.md`). A pipe is a case where a small engi
 not only in speed.
 
 SenkoParse now has `qe --stdin TABLE` (`crates/engine/src/storage/csv/stream.rs`, wired through `exec/`
-and the CLI). It was first compiled-but-untested; the original commit was lost and the module was re-implemented from this ADR, then tested (`tests/stream.rs`, difftest stream configuration) and measured (EXP-005-stream: peak RSS 42 MiB at 1x to 10x piped input of 375 MB to 3.7 GB, no temp files; DuckDB 2.0.0 piped spilled 237 MiB to 5.6 GB).
+and the CLI). It was first compiled-but-untested; the original commit was lost and the module was re-implemented from this ADR, then tested (`tests/stream.rs`, difftest stream configuration) and measured (EXP-005-stream: peak RSS 42 MiB at 1x to 10x piped input of 375 MB to 3.7 GB, no temp files; DuckDB 2.0.0 piped spilled 237 MiB to 5.4 GiB).
 
 ## Decision
 
