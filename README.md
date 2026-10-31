@@ -1,8 +1,6 @@
 <div align="center">
 
-<img src="docs/img/logo.png" alt="SenkoParse logo" width="160">
-
-# SenkoParse
+# <img src="docs/img/logo.png" alt="" height="56" align="absmiddle"> SenkoParse
 
 **A from-scratch SQL engine for big CSV files, built to run on a pipe in bounded memory.**
 
