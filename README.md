@@ -1,6 +1,8 @@
 <div align="center">
 
-# qe · SenkoParse
+<img src="docs/img/logo.png" alt="SenkoParse logo" width="160">
+
+# SenkoParse
 
 **A from-scratch SQL engine for big CSV files, built to run on a pipe in bounded memory.**
 
@@ -8,7 +10,7 @@
 
 <br>
 
-<img src="docs/img/stream-rss.svg" alt="Peak memory versus piped input size: qe stays at 42 MiB, DuckDB piped about 340 MiB" width="720">
+<img src="docs/img/stream-rss.svg" alt="Peak memory versus piped input size: SenkoParse stays at 42 MiB, DuckDB piped about 340 MiB" width="720">
 
 <sub>Measured, one query, 375 MB to 3.7 GB of piped input. Details, caveats and raw runs: [EXP-005-stream](docs/experiments/005-stream-memory.md).</sub>
 
@@ -22,7 +24,7 @@
 
 DuckDB issue #25165 reports that `read_csv('/dev/stdin')` buffers piped input and spills it to temp files. We reproduced it (DuckDB 2.0.0, `memory_limit=256MB`, 1 thread) and then measured `qe` on the same kind of query:
 
-| Piped input | `qe --stdin` peak RSS · temp | DuckDB piped peak RSS · temp | DuckDB by filename peak RSS · temp |
+| Piped input | SenkoParse peak RSS · temp | DuckDB piped peak RSS · temp | DuckDB by filename peak RSS · temp |
 |---|---|---|---|
 | 1x · 375 MB | **42 MiB** · 0 | 337 MiB · 237 MiB | 216–246 MiB · 0 |
 | 2x · 750 MB | **42 MiB** · 0 | 338 MiB · 644 MiB | 234–250 MiB · 0 |
@@ -100,8 +102,8 @@ DuckDB 2.0.0 could not be installed on this Mac (pip index stops at 1.4.5), so i
 | Run | Screenshot |
 |---|---|
 | Replay of the recorded 5x run (DuckDB live in the recording, hash identical) | ![5x replay](docs/img/demo-replay-5x.png) |
-| Live 1x, 375 MB piped: qe 43 MiB peak RSS, 0 B temp | ![live 1x](docs/img/demo-live-1x.png) |
-| Live 5x, 1.87 GB piped: qe 45 MiB peak RSS, 0 B temp | ![live 5x](docs/img/demo-live-5x.png) |
+| Live 1x, 375 MB piped: SenkoParse 43 MiB peak RSS, 0 B temp | ![live 1x](docs/img/demo-live-1x.png) |
+| Live 5x, 1.87 GB piped: SenkoParse 45 MiB peak RSS, 0 B temp | ![live 5x](docs/img/demo-live-5x.png) |
 
 ### Options
 

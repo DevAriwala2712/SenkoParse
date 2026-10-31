@@ -282,7 +282,7 @@ fn banner(v: &View, w: usize) -> String {
     let s = format!(
         "{}  ·  {}",
         bold(v, d.accent, &format!("DuckDB{tag}: +{} on disk", gb(dtemp))),
-        bold(v, q.accent, &format!("qe: {}{}", mib(qrss), if flat { " flat" } else { "" }))
+        bold(v, q.accent, &format!("SenkoParse: {}{}", mib(qrss), if flat { " flat" } else { "" }))
     );
     center(&s, w)
 }
@@ -370,7 +370,7 @@ pub fn render(v: &View, w: usize) -> Vec<String> {
         fit(&c(v, DIM, &s), w)
     };
     lines.push(foot(format!(" machine: {}", v.meta.machine)));
-    lines.push(foot(format!(" DuckDB {} · qe {} · input {} ({})", v.meta.duckdb, v.meta.qe_settings, v.meta.size, gb(v.meta.total_bytes))));
+    lines.push(foot(format!(" DuckDB {} · SenkoParse {} · input {} ({})", v.meta.duckdb, v.meta.qe_settings, v.meta.size, gb(v.meta.total_bytes))));
     lines.push(foot(format!(" query: {}", v.meta.query)));
     lines.push(foot(format!(" One query, one data shape (cf. DuckDB #25165): not a general speed claim.{}", if matches!(v.qe.source, Source::Summary(_)) || matches!(v.duck.source, Source::Summary(_)) { " * recorded" } else { "" })));
     lines.into_iter().map(|l| fit(&l, w)).collect()
