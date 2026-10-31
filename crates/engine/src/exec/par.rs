@@ -15,6 +15,7 @@ use super::hash_join::{build_table, HashJoin, ProbeOp};
 use super::ops::{Filter, Limit, Project, Scan, Sort};
 use super::Op;
 use crate::plan::{JoinType, Node, Plan};
+use crate::storage::csv::stream::{EmptyScan, StreamInput, StreamScan};
 use crate::storage::csv::CsvSource;
 use crate::types::{Batch, Ty};
 use crate::{err, Options, Result};
@@ -29,10 +30,14 @@ pub struct ExecCtx {
     pub chunk_bytes: usize,
     pub threads: usize,
     pub agg_partition_groups: usize,
+    /// The table fed from stdin, if any. Its scan is serial (a stream has no chunks).
+    pub stream: Option<Arc<StreamInput>>,
+    /// `--chunk-bytes` as given (stream block target); `None` = the stream default.
+    pub stream_block: Option<usize>,
 }
 
 impl ExecCtx {
-    pub fn new(opts: &Options) -> Result<ExecCtx> {
+    pub fn new(opts: &Options, stream: Option<Arc<StreamInput>>) -> Result<ExecCtx> {
         let pool = match opts.threads {
             Some(n) => Some(
                 rayon::ThreadPoolBuilder::new()
@@ -47,7 +52,13 @@ impl ExecCtx {
             chunk_bytes: opts.chunk_bytes.unwrap_or(DEFAULT_CHUNK_BYTES),
             threads: opts.threads.unwrap_or_else(rayon::current_num_threads).max(1),
             agg_partition_groups: opts.agg_partition_groups.unwrap_or(262_144),
+            stream,
+            stream_block: opts.chunk_bytes,
         })
+    }
+
+    pub fn is_stream(&self, table: &str) -> bool {
+        self.stream.as_ref().map_or(false, |s| s.table == table)
     }
 
     /// Run `f` on this query's thread pool (the global rayon pool unless `--threads` was given).
@@ -70,6 +81,7 @@ pub struct Chunked {
 /// Instantiate `plan` per chunk, or `None` if it contains a blocking operator (aggregate, sort, limit).
 pub fn chunked(plan: &Plan, ctx: &Arc<ExecCtx>) -> Result<Option<Chunked>> {
     Ok(match &plan.node {
+        Node::Scan { table, .. } if ctx.is_stream(&table.name) => None,
         Node::Scan { table, cols } => {
             let src = Arc::new(CsvSource::open(table, cols, false)?);
             let ranges = Arc::new(ctx.run(|| src.plan_chunks(ctx.chunk_bytes)));
@@ -130,6 +142,10 @@ pub fn build_par(plan: &Plan, ctx: &Arc<ExecCtx>) -> Result<Box<dyn Op>> {
         _ => match chunked(plan, ctx)? {
             Some(ch) => Box::new(ParStream::new(ctx.clone(), ch)),
             None => match &plan.node {
+                Node::Scan { table, cols } => match ctx.stream.as_ref().and_then(|s| s.take()) {
+                    Some(r) => Box::new(StreamScan::new(r, table.clone(), cols.clone(), false, ctx.stream_block)),
+                    None => Box::new(EmptyScan),
+                },
                 // e.g. HAVING / projection over an aggregate: cheap, stays serial
                 Node::Filter { input, pred } => Box::new(Filter { input: build_par(input, ctx)?, pred: pred.clone() }),
                 Node::Project { input, exprs } => Box::new(Project { input: build_par(input, ctx)?, exprs: exprs.clone() }),
@@ -201,6 +217,8 @@ impl Op for ParStream {
 pub struct CanonicalErrors {
     pub inner: Box<dyn Op>,
     pub plan: Plan,
+    /// Set when a table comes from a stream: the replay then uses an empty stream (see `canonical`).
+    pub stream_table: Option<String>,
 }
 
 impl Op for CanonicalErrors {
@@ -215,13 +233,17 @@ impl Op for CanonicalErrors {
 impl CanonicalErrors {
     fn canonical(&self, parallel_err: crate::Error) -> crate::Error {
         let reference = Options { no_opt: true, ..Options::default() };
+        let replay = self.stream_table.as_ref().map(|t| Arc::new(StreamInput::replay(t)));
         let run = || -> Result<()> {
-            let mut op = super::build_serial(self.plan.clone(), &reference)?;
+            let mut op = super::build_serial(self.plan.clone(), &reference, replay.as_ref())?;
             while op.next()?.is_some() {}
             Ok(())
         };
         match run() {
             Err(e) => e,
+            // With a stream the error may have come from the stream itself, which the replay (empty stream)
+            // cannot reproduce; stream scans are serial and report the reference error text already.
+            Ok(()) if self.stream_table.is_some() => parallel_err,
             Ok(()) => err!("{} (internal: the reference path completed without error)", parallel_err.0),
         }
     }

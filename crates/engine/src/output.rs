@@ -41,6 +41,11 @@ fn push_i64(buf: &mut Vec<u8>, v: i64) {
 }
 
 pub fn write_csv<W: Write>(names: &[String], op: &mut dyn Op, w: &mut W) -> Result<usize> {
+    write_csv_opts(names, op, w, false)
+}
+
+/// `flush_per_batch`: write and flush after every input batch (stream mode: results appear as input arrives).
+pub fn write_csv_opts<W: Write>(names: &[String], op: &mut dyn Op, w: &mut W, flush_per_batch: bool) -> Result<usize> {
     let io = |e: std::io::Error| crate::err!("write error: {e}");
     let mut buf: Vec<u8> = Vec::with_capacity(1 << 16);
     for (i, n) in names.iter().enumerate() {
@@ -79,6 +84,11 @@ pub fn write_csv<W: Write>(names: &[String], op: &mut dyn Op, w: &mut W) -> Resu
             }
         }
         rows += b.len;
+        if flush_per_batch && !buf.is_empty() {
+            w.write_all(&buf).map_err(io)?;
+            buf.clear();
+            w.flush().map_err(io)?;
+        }
     }
     w.write_all(&buf).map_err(io)?;
     w.flush().map_err(io)?;

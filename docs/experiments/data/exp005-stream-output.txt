@@ -1,0 +1,58 @@
+machine: Linux-6.18.44-fc-v185-x86_64-with-glibc2.39, Intel(R) Xeon(R) Processor @ 2.10GHz, 4 cores, 16091 MiB RAM
+qe commit 67cc23d; duckdb 2.0.0; python 3.13.18; DuckDB: memory_limit=256MB threads=1; qe: --threads 1, default 4 MiB blocks
+measurement floor (wrapper + `true`): 12.4 MiB RSS
+query: SELECT a.id, a.center_id, a.user_id, a.session_id, a.device_id, a.trace_id, a.user_agent, a.ts FROM a JOIN ids i ON a.center_id = i.id
+
+{"wall_s": 0.704, "rss_mib": 41.6, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "qe pipe", "run": 1, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 0.648, "rss_mib": 41.9, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "qe pipe", "run": 2, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 0.552, "rss_mib": 41.9, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "qe pipe", "run": 3, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 2.039, "rss_mib": 337.4, "temp_mib": 236.1, "size": "1x", "input_mb": 375, "engine": "duckdb pipe", "run": 1, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 2.105, "rss_mib": 336.7, "temp_mib": 236.7, "size": "1x", "input_mb": 375, "engine": "duckdb pipe", "run": 2, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 2.126, "rss_mib": 337.6, "temp_mib": 233.3, "size": "1x", "input_mb": 375, "engine": "duckdb pipe", "run": 3, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 0.924, "rss_mib": 246.2, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "duckdb file", "run": 1, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 0.898, "rss_mib": 216.0, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "duckdb file", "run": 2, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 0.903, "rss_mib": 221.7, "temp_mib": 0.0, "size": "1x", "input_mb": 375, "engine": "duckdb file", "run": 3, "out_rows": 54986, "digest": "9f416e074cef0c72"}
+{"wall_s": 1.031, "rss_mib": 41.9, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "qe pipe", "run": 1, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 1.027, "rss_mib": 41.8, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "qe pipe", "run": 2, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 1.031, "rss_mib": 41.8, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "qe pipe", "run": 3, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 4.404, "rss_mib": 337.9, "temp_mib": 639.9, "size": "2x", "input_mb": 750, "engine": "duckdb pipe", "run": 1, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 6.152, "rss_mib": 338.1, "temp_mib": 639.7, "size": "2x", "input_mb": 750, "engine": "duckdb pipe", "run": 2, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 4.226, "rss_mib": 337.7, "temp_mib": 644.1, "size": "2x", "input_mb": 750, "engine": "duckdb pipe", "run": 3, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 1.573, "rss_mib": 249.8, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "duckdb file", "run": 1, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 1.623, "rss_mib": 233.8, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "duckdb file", "run": 2, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 1.654, "rss_mib": 245.9, "temp_mib": 0.0, "size": "2x", "input_mb": 750, "engine": "duckdb file", "run": 3, "out_rows": 109972, "digest": "170e4645c3fcdd00"}
+{"wall_s": 2.538, "rss_mib": 42.2, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "qe pipe", "run": 1, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 2.637, "rss_mib": 42.1, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "qe pipe", "run": 2, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 2.548, "rss_mib": 42.0, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "qe pipe", "run": 3, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 22.037, "rss_mib": 341.9, "temp_mib": 1453.8, "size": "5x", "input_mb": 1874, "engine": "duckdb pipe", "run": 1, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 18.326, "rss_mib": 341.5, "temp_mib": 1641.1, "size": "5x", "input_mb": 1874, "engine": "duckdb pipe", "run": 2, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 18.836, "rss_mib": 341.5, "temp_mib": 1676.2, "size": "5x", "input_mb": 1874, "engine": "duckdb pipe", "run": 3, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 3.651, "rss_mib": 244.9, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "duckdb file", "run": 1, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 3.724, "rss_mib": 228.5, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "duckdb file", "run": 2, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 3.545, "rss_mib": 250.5, "temp_mib": 0.0, "size": "5x", "input_mb": 1874, "engine": "duckdb file", "run": 3, "out_rows": 274930, "digest": "0ad12221db003359"}
+{"wall_s": 4.78, "rss_mib": 42.0, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "qe pipe", "run": 1, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 4.793, "rss_mib": 42.0, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "qe pipe", "run": 2, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 5.05, "rss_mib": 42.0, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "qe pipe", "run": 3, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 69.903, "rss_mib": 345.8, "temp_mib": 5545.3, "size": "10x", "input_mb": 3749, "engine": "duckdb pipe", "run": 1, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 70.871, "rss_mib": 346.0, "temp_mib": 5391.9, "size": "10x", "input_mb": 3749, "engine": "duckdb pipe", "run": 2, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 69.843, "rss_mib": 345.9, "temp_mib": 5570.5, "size": "10x", "input_mb": 3749, "engine": "duckdb pipe", "run": 3, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 7.223, "rss_mib": 244.6, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "duckdb file", "run": 1, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 7.255, "rss_mib": 244.8, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "duckdb file", "run": 2, "out_rows": 549860, "digest": "2f09c042d91043de"}
+{"wall_s": 6.959, "rss_mib": 232.0, "temp_mib": 0.0, "size": "10x", "input_mb": 3749, "engine": "duckdb file", "run": 3, "out_rows": 549860, "digest": "2f09c042d91043de"}
+
+| size | input MB | engine | wall s (min/med/max) | peak RSS MiB (min/med/max) | peak temp MiB (max) | output rows |
+|---|---|---|---|---|---|---|
+| 1x | 375 | qe pipe | 0.552/0.648/0.704 | 41.6/41.9/41.9 | 0.0 | 54986 |
+| 1x | 375 | duckdb pipe | 2.039/2.105/2.126 | 336.7/337.4/337.6 | 236.7 | 54986 |
+| 1x | 375 | duckdb file | 0.898/0.903/0.924 | 216.0/221.7/246.2 | 0.0 | 54986 |
+| 2x | 750 | qe pipe | 1.027/1.031/1.031 | 41.8/41.8/41.9 | 0.0 | 109972 |
+| 2x | 750 | duckdb pipe | 4.226/4.404/6.152 | 337.7/337.9/338.1 | 644.1 | 109972 |
+| 2x | 750 | duckdb file | 1.573/1.623/1.654 | 233.8/245.9/249.8 | 0.0 | 109972 |
+| 5x | 1874 | qe pipe | 2.538/2.548/2.637 | 42.0/42.1/42.2 | 0.0 | 274930 |
+| 5x | 1874 | duckdb pipe | 18.326/18.836/22.037 | 341.5/341.5/341.9 | 1676.2 | 274930 |
+| 5x | 1874 | duckdb file | 3.545/3.651/3.724 | 228.5/244.9/250.5 | 0.0 | 274930 |
+| 10x | 3749 | qe pipe | 4.78/4.793/5.05 | 42.0/42.0/42.0 | 0.0 | 549860 |
+| 10x | 3749 | duckdb pipe | 69.843/69.903/70.871 | 345.8/345.9/346.0 | 5570.5 | 549860 |
+| 10x | 3749 | duckdb file | 6.959/7.223/7.255 | 232.0/244.6/244.8 | 0.0 | 549860 |
+
+output check (row multiset digest identical across all engines and runs, per size): OK

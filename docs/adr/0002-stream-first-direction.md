@@ -1,6 +1,6 @@
 # ADR-0002: Stream-first direction
 
-**Status:** Proposed (team decision to change direction, 2026-10-31); implementation compiled, NOT tested
+**Status:** Accepted for the headline; implementation tested and memory measured on one query (EXP-005-stream), 2026-10-31
 **Date:** 2026-10-31
 **Deciders:** team (hackathon)
 **Supersedes:** the "beat DuckDB on general speed" goal behind [ADR-0001](0001-parallel-and-fast-path-execution.md). ADR-0001's decisions stay valid; its remaining steps move to "Later".
@@ -23,7 +23,7 @@ our benchmark machine yet (`BENCHMARKS.md`). A pipe is a case where a small engi
 not only in speed.
 
 SenkoParse now has `qe --stdin TABLE` (`crates/engine/src/storage/csv/stream.rs`, wired through `exec/`
-and the CLI). It is compiled, **not tested**. No SenkoParse memory or speed number exists.
+and the CLI). It was first compiled-but-untested; the original commit was lost and the module was re-implemented from this ADR, then tested (`tests/stream.rs`, difftest stream configuration) and measured (EXP-005-stream: peak RSS 42 MiB at 1x to 10x piped input of 375 MB to 3.7 GB, no temp files; DuckDB 2.0.0 piped spilled 237 MiB to 5.6 GB).
 
 ## Decision
 
@@ -62,9 +62,12 @@ Rules and plan are in `CLAUDE.md` ("Streaming rules", "Performance plan"). All h
 
 ## Open items
 
-- [ ] Run the tests and diff stream mode against file mode (nothing is verified yet).
-- [ ] EXP-005-stream: peak RSS and temp use, SenkoParse vs DuckDB, at 1x / 2x / 5x / 10x piped input.
-- [ ] Tricky-input tests: quoted newlines, CRLF, byte-dribbled reads, tiny `--chunk-bytes`.
+- [x] Run the tests and diff stream mode against file mode (done: `tests/stream.rs`, difftest).
+- [x] EXP-005-stream: peak RSS and temp use, SenkoParse vs DuckDB, at 1x / 2x / 5x / 10x piped input (done, one query; data is a reconstruction of the issue's shape).
+- [x] Tricky-input tests: quoted newlines, CRLF, byte-dribbled reads, tiny `--chunk-bytes` (done).
+- [ ] `f64` sums in stream mode vs file mode are only compared with tolerance, not bit-for-bit.
+- [ ] `SELECT a.*` / `SELECT *` are not in the supported SQL; the EXP-005-stream query lists the columns.
+- [ ] Re-run EXP-005-stream with the issue's own generator once its text is available.
 - [ ] Decide `IN (SELECT ...)` (optional, true semi-join).
 - [ ] `docs/strategy.md` is referenced by `CLAUDE.md` but is not in the repo; export it or drop the reference.
 - [ ] Decide whether to rename the join experiment to avoid two "EXP-005" IDs.

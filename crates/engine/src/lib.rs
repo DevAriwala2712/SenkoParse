@@ -34,11 +34,39 @@ pub struct Prepared {
 }
 
 pub fn prepare(data_dir: &Path, sql: &str, opts: &Options) -> Result<Prepared> {
+    prepare_inner(data_dir, sql, opts, None)
+}
+
+/// Like `prepare`, but table `table` is read from `input` (a non-seekable stream such as stdin) instead of
+/// `<table>.csv`. The schema still comes from `schema.toml`. The stream is read once, single-threaded, in
+/// bounded memory (see `storage::csv::stream`); `opts.chunk_bytes` is the block size.
+pub fn prepare_stream(
+    data_dir: &Path,
+    sql: &str,
+    opts: &Options,
+    table: &str,
+    input: Box<dyn std::io::Read + Send>,
+) -> Result<Prepared> {
+    prepare_inner(data_dir, sql, opts, Some(std::sync::Arc::new(storage::StreamInput::new(table, input))))
+}
+
+fn prepare_inner(
+    data_dir: &Path,
+    sql: &str,
+    opts: &Options,
+    stream: Option<std::sync::Arc<storage::StreamInput>>,
+) -> Result<Prepared> {
     let catalog = storage::Catalog::load(data_dir)?;
+    if let Some(s) = &stream {
+        catalog.table(&s.table)?;
+    }
     let stmt = sql::parse(sql)?;
-    let (plan, names) = plan::bind(&stmt, &catalog)?;
+    let (mut plan, names) = plan::bind(&stmt, &catalog)?;
+    if let Some(s) = &stream {
+        plan = exec::place_stream(plan, &s.table)?;
+    }
     let types = plan.schema.iter().map(|f| f.ty).collect();
-    let root = exec::build(plan, opts)?;
+    let root = exec::build_stream(plan, opts, stream)?;
     Ok(Prepared { names, types, root })
 }
 
@@ -49,6 +77,24 @@ pub fn run_collect(data_dir: &Path, sql: &str) -> Result<(Vec<String>, Vec<Vec<V
 
 pub fn run_collect_opts(data_dir: &Path, sql: &str, opts: &Options) -> Result<(Vec<String>, Vec<Vec<Value>>)> {
     let mut p = prepare(data_dir, sql, opts)?;
+    let mut rows = Vec::new();
+    while let Some(b) = p.root.next()? {
+        for i in 0..b.len {
+            rows.push(b.cols.iter().map(|c| c.value(i)).collect());
+        }
+    }
+    Ok((p.names, rows))
+}
+
+/// `run_collect_opts` with table `table` read from `input` instead of its file.
+pub fn run_collect_stream(
+    data_dir: &Path,
+    sql: &str,
+    opts: &Options,
+    table: &str,
+    input: Box<dyn std::io::Read + Send>,
+) -> Result<(Vec<String>, Vec<Vec<Value>>)> {
+    let mut p = prepare_stream(data_dir, sql, opts, table, input)?;
     let mut rows = Vec::new();
     while let Some(b) = p.root.next()? {
         for i in 0..b.len {
