@@ -200,6 +200,7 @@ impl Op for StreamScan {
         loop {
             if let Some(r) = &mut self.reader {
                 if let Some(b) = r.next_batch()? {
+                    crate::progress::add_rows_in(b.len);
                     return Ok(Some(b));
                 }
                 self.rows = r.rows();

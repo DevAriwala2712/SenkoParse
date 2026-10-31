@@ -1,3 +1,4 @@
+mod progress;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
@@ -6,6 +7,7 @@ fn main() {
     let mut sql: Option<String> = None;
     let mut opts = engine::Options::default();
     let mut stdin_table: Option<String> = None;
+    let mut show_progress = false;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -14,9 +16,10 @@ fn main() {
             "--threads" => opts.threads = Some(num(args.next(), "--threads")),
             "--chunk-bytes" => opts.chunk_bytes = Some(num(args.next(), "--chunk-bytes")),
             "--stdin" => stdin_table = Some(args.next().unwrap_or_else(|| die("--stdin needs a table name"))),
+            "--progress" => show_progress = true,
             "--cache" => die("--cache is not implemented yet (M6)"),
             "-h" | "--help" => {
-                eprintln!("usage: qe [--data DIR] [--no-opt] [--threads N] [--chunk-bytes N] [--stdin TABLE] \"SELECT ...\"");
+                eprintln!("usage: qe [--data DIR] [--no-opt] [--threads N] [--chunk-bytes N] [--stdin TABLE] [--progress] \"SELECT ...\"");
                 return;
             }
             _ if a.starts_with("--") => die(&format!("unknown option {a}")),
@@ -24,15 +27,19 @@ fn main() {
         }
     }
     let sql = sql.unwrap_or_else(|| die("missing SQL query"));
+    let prog = if show_progress { progress::Progress::start(stdin_table.is_some()) } else { None };
     let result = match &stdin_table {
         None => engine::prepare(&data, &sql, &opts),
-        Some(t) => engine::prepare_stream(&data, &sql, &opts, t, Box::new(std::io::stdin())),
+        Some(t) => engine::prepare_stream(&data, &sql, &opts, t, Box::new(progress::Counting(std::io::stdin()))),
     }
     .and_then(|mut p| {
         let out = std::io::stdout().lock();
         let mut w = BufWriter::with_capacity(1 << 20, out);
         engine::output::write_csv_opts(&p.names, &mut *p.root, &mut w, stdin_table.is_some())
     });
+    if let Some(p) = prog {
+        p.finish();
+    }
     if let Err(e) = result {
         eprintln!("error: {e}");
         std::process::exit(1);

@@ -84,6 +84,7 @@ pub fn write_csv_opts<W: Write>(names: &[String], op: &mut dyn Op, w: &mut W, fl
             }
         }
         rows += b.len;
+        crate::progress::add_rows_out(b.len);
         if flush_per_batch && !buf.is_empty() {
             w.write_all(&buf).map_err(io)?;
             buf.clear();
