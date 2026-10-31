@@ -1,0 +1,315 @@
+Analysis of sampling qe (pid 41253) every 1 millisecond
+Process:         qe [41253]
+Path:            /Users/USER/Desktop/*/qe
+Load Address:    0x100894000
+Identifier:      qe
+Version:         0
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  zsh [41252]
+Target Type:     live task
+
+Date/Time:       2026-10-31 21:09:47.493 +0530
+Launch Time:     2026-10-31 21:09:46.302 +0530
+OS Version:      macOS 27.0.1 (26A434)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+----
+
+Call graph:
+    307 Thread_10319380   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 307 start  (in dyld) + 6688  [0x19dbdbe80]
+    +   307 main  (in qe) + 852  [0x1008970ec]
+    +     307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsgJ4wYTXidDx_2qe  (in qe) + 12  [0x10089488c]  backtrace.rs:166
+    +       175 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 3604  [0x100895968]  main.rs:25
+    +       ! 104 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4184  [0x1008a0a98]  float.rs:84
+    +       ! : 84 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 524  [0x10089d4a8]  mod.rs:2070
+    +       ! : | 58 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 112  [0x100897ac0]  string.rs:3382
+    +       ! : | + 52 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 68  [0x1009016d0]  mod.rs:665
+    +       ! : | + ! 34 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 40  [0x100901728]  mod.rs:557
+    +       ! : | + ! : 25 _realloc  (in libsystem_malloc.dylib) + 456  [0x19ddd9358]
+    +       ! : | + ! : | 20 _malloc_zone_realloc  (in libsystem_malloc.dylib) + 148  [0x19ddd8b2c]
+    +       ! : | + ! : | + 13 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 320,848,...  [0x19ddc9150,0x19ddc9360,...]
+    +       ! : | + ! : | + 4 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 1028  [0x19ddc9414]
+    +       ! : | + ! : | + ! 3 _xzm_free  (in libsystem_malloc.dylib) + 1384  [0x19ddd0c68]
+    +       ! : | + ! : | + ! : 3 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x19df6d0f8]
+    +       ! : | + ! : | + ! 1 _xzm_free  (in libsystem_malloc.dylib) + 220  [0x19ddd07dc]
+    +       ! : | + ! : | + 2 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 896  [0x19ddc9390]
+    +       ! : | + ! : | + ! 1 _xzm_malloc  (in libsystem_malloc.dylib) + 104  [0x19ddcbe5c]
+    +       ! : | + ! : | + ! 1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 92  [0x19ddccaa8]
+    +       ! : | + ! : | + 1 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 996  [0x19ddc93f4]
+    +       ! : | + ! : | +   1 _platform_memmove  (in libsystem_platform.dylib) + 428  [0x19dfbbf0c]
+    +       ! : | + ! : | 5 _malloc_zone_realloc  (in libsystem_malloc.dylib) + 48,168  [0x19ddd8ac8,0x19ddd8b40]
+    +       ! : | + ! : 4 _realloc  (in libsystem_malloc.dylib) + 252  [0x19ddd928c]
+    +       ! : | + ! : | 4 xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 92,116,...  [0x19ddc8360,0x19ddc8378,...]
+    +       ! : | + ! : 3 _realloc  (in libsystem_malloc.dylib) + 96,208,...  [0x19ddd91f0,0x19ddd9260,...]
+    +       ! : | + ! : 2 DYLD-STUB$$realloc  (in qe) + 4  [0x10090af94]
+    +       ! : | + ! 10 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 76  [0x10090174c]  mod.rs:560
+    +       ! : | + ! : 5 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 16,104,...  [0x19ddcca5c,0x19ddccab4,...]
+    +       ! : | + ! : 3 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 44,12  [0x19ddd851c,0x19ddd84fc]
+    +       ! : | + ! : 2 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 92,288  [0x19ddd3864,0x19ddd3928]
+    +       ! : | + ! 4 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 4,8  [0x100901704,0x100901708]  mod.rs:544
+    +       ! : | + ! 2 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 76  [0x10090174c]  mod.rs:563
+    +       ! : | + ! 1 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 20  [0x100901714]  layout.rs:0
+    +       ! : | + ! 1 _realloc  (in libsystem_malloc.dylib) + 504  [0x19ddd9388]
+    +       ! : | + 3 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 120  [0x100901778]  mod.rs:564
+    +       ! : | + 2 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 68  [0x1009016d0]  mod.rs:665
+    +       ! : | + 1 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 8  [0x100901694]  mod.rs:658
+    +       ! : | 23 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 64  [0x100897a90]  string.rs:3382
+    +       ! : | + 18 _platform_memmove  (in libsystem_platform.dylib) + 452,428,...  [0x19dfbbf24,0x19dfbbf0c,...]
+    +       ! : | + 5 DYLD-STUB$$memcpy  (in qe) + 4  [0x10090adfc]
+    +       ! : | 3 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 28  [0x100897a6c]  string.rs:3382
+    +       ! : 7 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 84  [0x100897aa4]  string.rs:3384
+    +       ! : 4 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 168,160  [0x10089d344,0x10089d33c]  mod.rs:2044
+    +       ! : 3 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 512  [0x10089d49c]  mod.rs:2070
+    +       ! : 2 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter19pad_formatted_parts  (in qe) + 36  [0x10089d0a4]  mod.rs:1982
+    +       ! : 2 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 148,600  [0x10089d330,0x10089d4f4]  result.rs:0
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter19pad_formatted_parts  (in qe) + 16  [0x10089d090]  mod.rs:1981
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 44  [0x10089d2c8]  mod.rs:2040
+    +       ! 62 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 1568,1056,...  [0x1008a0060,0x10089fe60,...]  float.rs:75
+    +       ! 5 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4160  [0x1008a0a80]  float.rs:75
+    +       ! : 2 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 0  [0x10089b73c]  mod.rs:177
+    +       ! : 1 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 32  [0x10089b75c]  mod.rs:0
+    +       ! : 1 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 12  [0x10089b748]  mod.rs:184
+    +       ! : 1 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 96  [0x10089b79c]  mod.rs:220
+    +       ! 3 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 624  [0x10089d50c]  mod.rs:2075
+    +       ! 1 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4  [0x10089fa44]  float.rs:62
+    +       81 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5720  [0x1008961ac]  main.rs:25
+    +       ! 53 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x19ddd519c]
+    +       ! : 51 mach_absolute_time  (in libsystem_kernel.dylib) + 108,112,...  [0x19df6d0f8,0x19df6d0fc,...]
+    +       ! : 2 DYLD-STUB$$mach_absolute_time  (in libsystem_malloc.dylib) + 8  [0x19ddee8a8]
+    +       ! 18 _xzm_free_main  (in libsystem_malloc.dylib) + 448,592,...  [0x19ddd507c,0x19ddd510c,...]
+    +       ! 8 _free  (in libsystem_malloc.dylib) + 0,36,...  [0x19ddd9110,0x19ddd9134,...]
+    +       ! 2 DYLD-STUB$$free  (in qe) + 4  [0x10090ada8]
+    +       12 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 2428,2316,...  [0x1008954d0,0x100895460,...]  main.rs:25
+    +       10 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5684  [0x100896188]  main.rs:25
+    +       ! 10 _platform_memmove  (in libsystem_platform.dylib) + 452,428  [0x19dfbbf24,0x19dfbbf0c]
+    +       8 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5508  [0x1008960d8]  main.rs:25
+    +       ! 8 _platform_memmove  (in libsystem_platform.dylib) + 452,436,...  [0x19dfbbf24,0x19dfbbf14,...]
+    +       6 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 2428  [0x1008954d0]  main.rs:25
+    +       ! 5 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 76,404,...  [0x19ddcca98,0x19ddccbe0,...]
+    +       ! 1 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 52  [0x19ddd8524]
+    +       6 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 4528  [0x100895d04]  main.rs:25
+    +       ! 6 _platform_memmove  (in libsystem_platform.dylib) + 428,452  [0x19dfbbf0c,0x19dfbbf24]
+    +       5 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 6000  [0x1008962c4]  main.rs:25
+    +       ! 5 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3parNtB5_15CanonicalErrorsNtB7_2Op4next  (in qe) + 60  [0x1008ae6a4]  par.rs:206
+    +       !   5 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3opsNtB5_7ProjectNtB7_2Op4next  (in qe) + 60  [0x1008b9ce0]  ops.rs:55
+    +       !     5 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 548  [0x1008bc8a0]  hash_agg.rs:534
+    +       !       5 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column4take  (in qe) + 128,148,...  [0x1008b0c78,0x1008b0c8c,...]  mod.rs:202
+    +       3 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4208  [0x1008a0ab0]  float.rs:85
+    +       1 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 2172  [0x1008953d0]  main.rs:25
+    +         1 _platform_memmove  (in libsystem_platform.dylib) + 88  [0x19dfbbdb8]
+    307 Thread_10319384
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319385
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319386
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319387
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319388
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319389
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319390
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319391
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319392
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319393
+    + 307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+    +       307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+    +         307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+    +           307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+    +             307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    307 Thread_10319394
+      307 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+        307 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+          307 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+            307 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+              307 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+                307 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+                  307 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+                    307 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+
+Total number in stack (recursive counted multiple, when >=5):
+        11       _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x1008d65c0]  backtrace.rs:166
+        11       _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x1008d9338]  function.rs:250
+        11       _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100905a70]  registry.rs:806
+        11       _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x1008fd004]  unix.rs:123
+        11       __psynch_cvwait  (in libsystem_kernel.dylib) + 0  [0x19df70504]
+        11       _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+        11       _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+        11       thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+        6       _platform_memmove  (in libsystem_platform.dylib) + 0  [0x19dfbbd60]
+
+Sort by top of stack, same collapsed (when >= 5):
+        __psynch_cvwait  (in libsystem_kernel.dylib)        3377
+        _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe)        66
+        mach_absolute_time  (in libsystem_kernel.dylib)        54
+        _platform_memmove  (in libsystem_platform.dylib)        44
+        _xzm_free_main  (in libsystem_malloc.dylib)        18
+        _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe)        13
+        xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib)        13
+        _RNvCsgJ4wYTXidDx_2qe4main  (in qe)        12
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        11
+        _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe)        10
+        _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe)        10
+        _free  (in libsystem_malloc.dylib)        8
+        DYLD-STUB$$memcpy  (in qe)        5
+        _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column4take  (in qe)        5
+        _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe)        5
+        _malloc_zone_realloc  (in libsystem_malloc.dylib)        5
+
+Binary Images:
+       0x100894000 -        0x10091dfd7 +qe (0) <875B9D60-62D3-3B01-B1A9-239892734BEC> /Users/*/Desktop/*/qe
+       0x19db28000 -        0x19db775f7  libobjc.A.dylib (973.1) <C0680DF6-9900-3C29-A071-95A031686EF8> /usr/lib/libobjc.A.dylib
+       0x19db78000 -        0x19db8223f  libsharedcache.dylib (0) <BBF95357-BEBF-3D89-8900-2BBB14A667C5> /usr/lib/libsharedcache.dylib
+       0x19db83000 -        0x19dba9d3b  libdyld.dylib (27062) <62863BCA-DD60-3D32-A9DB-89099BA6F3D7> /usr/lib/system/libdyld.dylib
+       0x19dbaa000 -        0x19dc696e3  dyld (1.0.0 - 27062) <D341DDCB-7969-3A9C-8E03-0CF4751398A9> /usr/lib/dyld
+       0x19dc6a000 -        0x19dc6d01f  libsystem_blocks.dylib (98.1) <6F304731-D95D-3501-B4AD-F2934F7F2446> /usr/lib/system/libsystem_blocks.dylib
+       0x19dc6e000 -        0x19dcc30df  libxpc.dylib (3298.1.1) <0791121F-B5FC-3F84-BF04-115E86D2D882> /usr/lib/system/libxpc.dylib
+       0x19dcc4000 -        0x19dce3c13  libsystem_trace.dylib (1966.1.1) <B48A8E3E-A12A-3342-8321-428B555E965E> /usr/lib/system/libsystem_trace.dylib
+       0x19dce4000 -        0x19dd98f27  libcorecrypto.dylib (2109.0.22) <807AA6C9-5D8A-3CA5-B4CE-FACE5296EF6A> /usr/lib/system/libcorecrypto.dylib
+       0x19dd99000 -        0x19ddeec5f  libsystem_malloc.dylib (886.0.8) <2339CB57-FE5A-3154-A206-A76059C749EB> /usr/lib/system/libsystem_malloc.dylib
+       0x19ddef000 -        0x19de3519f  libdispatch.dylib (1605.0.2) <022BF08F-0B3A-3225-9E65-16D1553CE90D> /usr/lib/system/libdispatch.dylib
+       0x19de36000 -        0x19de38d2b  libsystem_featureflags.dylib (108) <20C1CAB2-1F13-3426-8146-9CAE9FF2A33D> /usr/lib/system/libsystem_featureflags.dylib
+       0x19de39000 -        0x19debbca3  libsystem_c.dylib (1786.0.3) <FBA7B23E-AA60-3A90-9AA4-A7A2E0AD63EE> /usr/lib/system/libsystem_c.dylib
+       0x19debc000 -        0x19df51033  libc++.1.dylib (2200.27) <1E9BA4AA-B5DA-3CF3-80AC-4B880049573F> /usr/lib/libc++.1.dylib
+       0x19df52000 -        0x19df6beff  libc++abi.dylib (2200.27) <A21743EE-6E1C-3E74-97EA-7AF793DE4BDF> /usr/lib/libc++abi.dylib
+       0x19df6c000 -        0x19dfaa9ab  libsystem_kernel.dylib (13432.1.9) <F63BF418-8F75-34A4-AAF1-8CAF2B9B6A05> /usr/lib/system/libsystem_kernel.dylib
+       0x19dfab000 -        0x19dfb791b  libsystem_pthread.dylib (553.0.1) <5A1828C3-CBC2-3B85-BD07-C8ED10021A41> /usr/lib/system/libsystem_pthread.dylib
+       0x19dfb8000 -        0x19dfc14f3  libsystem_platform.dylib (402.0.1.0.1) <080E4444-A0FB-3913-9756-4E470015F32F> /usr/lib/system/libsystem_platform.dylib
+       0x19dfc2000 -        0x19dff0903  libsystem_info.dylib (603) <BC387AEB-1CEF-3513-92D7-D7F913596711> /usr/lib/system/libsystem_info.dylib
+       0x1a211a000 -        0x1a2123b13  libsystem_darwin.dylib (1786.0.3) <4E66C888-993C-3E6A-A8DA-A949C01C5B67> /usr/lib/system/libsystem_darwin.dylib
+       0x1a2574000 -        0x1a2585b8b  libsystem_notify.dylib (368) <58FD36D8-37A7-311C-80F2-8E64DD8710CF> /usr/lib/system/libsystem_notify.dylib
+       0x1a46d1000 -        0x1a46ebd93  libsystem_networkextension.dylib (2340.1.2) <22E1D190-486F-324F-ABA4-F36AB841BFE9> /usr/lib/system/libsystem_networkextension.dylib
+       0x1a4779000 -        0x1a4790247  libsystem_asl.dylib (409) <B4D449B7-A821-3A9A-8019-E917B291F10A> /usr/lib/system/libsystem_asl.dylib
+       0x1a5724000 -        0x1a5724f2f  libobjcMsgSend.dylib (973.1) <41179EDE-DC97-3BBE-8848-6400D12C1436> /usr/lib/objc/libobjcMsgSend.dylib
+       0x1a6870000 -        0x1a6877edf  libsystem_symptoms.dylib (2394.0.4) <60EE7884-9F4E-3184-A6AC-FA40A7A0297D> /usr/lib/system/libsystem_symptoms.dylib
+       0x1aac08000 -        0x1aac42aeb  libsystem_containermanager.dylib (833.0.8.0.1) <08A57205-555D-3792-8931-9D5B585AF326> /usr/lib/system/libsystem_containermanager.dylib
+       0x1ac25b000 -        0x1ac25f317  libsystem_configuration.dylib (1446) <F3EB66A7-7A24-3AE5-B6E8-9A37BB00F119> /usr/lib/system/libsystem_configuration.dylib
+       0x1ac260000 -        0x1ac266e03  libsystem_sandbox.dylib (3051.0.52) <1E892B56-092E-3832-BDE3-DCE356D7A4FA> /usr/lib/system/libsystem_sandbox.dylib
+       0x1ad724000 -        0x1ad724f2f  libobjcMsgSend1.dylib (973.1) <B40D9B2A-E1EE-37ED-8004-711A1F263DE1> /usr/lib/objc/libobjcMsgSend1.dylib
+       0x1ade44000 -        0x1ade46f93  libquarantine.dylib (217.0.4) <7FD4AE22-86EF-382B-83F5-ADF9336C1160> /usr/lib/system/libquarantine.dylib
+       0x1ae556000 -        0x1ae55c1e7  libsystem_coreservices.dylib (203) <57248E07-11A5-3857-918E-4A3A63B69FE8> /usr/lib/system/libsystem_coreservices.dylib
+       0x1aeb1e000 -        0x1aeb5bb27  libsystem_m.dylib (3326.0.1) <A3FB340F-3ED5-30F4-8B64-9D5860F64D35> /usr/lib/system/libsystem_m.dylib
+       0x1aeb5c000 -        0x1aeb5cb47  libcharset.1.dylib (121) <3C9B584E-740A-3664-A1B0-52E561EA4B0B> /usr/lib/libcharset.1.dylib
+       0x1aeb5d000 -        0x1aeb604f7  libmacho.dylib (27062) <50DEADEC-3E99-3519-AFC3-4A3FEB3F14C3> /usr/lib/system/libmacho.dylib
+       0x1aeb7a000 -        0x1aeb86707  libcommonCrypto.dylib (600041) <41C99F45-C5E6-39DB-B1F2-A1BEA9D242A4> /usr/lib/system/libcommonCrypto.dylib
+       0x1aeb87000 -        0x1aeb90c87  libunwind.dylib (2200.5) <3070AB81-B082-39E8-8A00-EF88DDE9AC47> /usr/lib/system/libunwind.dylib
+       0x1aeb98000 -        0x1aeba27eb  libcopyfile.dylib (260.0.3) <72D95AF9-BF5E-3A84-81A6-BCC5BDB99857> /usr/lib/system/libcopyfile.dylib
+       0x1aeba3000 -        0x1aeba68bf  libcompiler_rt.dylib (103.4) <DFB5CE7F-A36E-36AA-BECE-1392D3D43607> /usr/lib/system/libcompiler_rt.dylib
+       0x1aeba7000 -        0x1aebac077  libsystem_collections.dylib (1786.0.3) <1E8022D4-5A37-3A7A-8936-603E6FA88358> /usr/lib/system/libsystem_collections.dylib
+       0x1aebad000 -        0x1aebaff1f  libsystem_secinit.dylib (182) <DE037464-4C5D-3E96-A33F-2A4557CC6A20> /usr/lib/system/libsystem_secinit.dylib
+       0x1aebb0000 -        0x1aebb297f  libremovefile.dylib (96) <E6E6DFCF-6B2C-3F30-A59D-816CAB1190CE> /usr/lib/system/libremovefile.dylib
+       0x1aebb3000 -        0x1aebb3e27  libkeymgr.dylib (31) <5EC997EF-3ADA-360B-9FCD-5F940C83FA4E> /usr/lib/system/libkeymgr.dylib
+       0x1aebb4000 -        0x1aebbcaf7  libsystem_dnssd.dylib (3111.0.5.0.1) <DE22096F-1E5B-3D6E-8164-771582DD6391> /usr/lib/system/libsystem_dnssd.dylib
+       0x1aebbd000 -        0x1aebc1f1b  libcache.dylib (95) <80BAE197-E285-3F6E-A1EE-B77FE37D7E5D> /usr/lib/system/libcache.dylib
+       0x1aebc2000 -        0x1aebc38f3  libSystem.B.dylib (1359) <4FDC9AA6-B344-37FE-B8C6-A4C94A038F57> /usr/lib/libSystem.B.dylib
+       0x1aebfc000 -        0x1aec030a3  libiconv.2.dylib (121) <C343D6F7-6932-30E8-8E8F-F756946D8413> /usr/lib/libiconv.2.dylib
+       0x1b5724000 -        0x1b5724f2f  libobjcMsgSend2.dylib (973.1) <BD27A84B-C9AE-3282-BBEA-3B6119837B5A> /usr/lib/objc/libobjcMsgSend2.dylib
+       0x1bd724000 -        0x1bd724f2f  libobjcMsgSend3.dylib (973.1) <C0860D68-DDFC-3BD7-8B06-DB0645CBBED4> /usr/lib/objc/libobjcMsgSend3.dylib
+       0x1c5724000 -        0x1c5724f2f  libobjcMsgSend4.dylib (973.1) <A6153BF5-622B-3B01-81B6-F64A365EF613> /usr/lib/objc/libobjcMsgSend4.dylib
+       0x1cd724000 -        0x1cd724f2f  libobjcMsgSend5.dylib (973.1) <3913A71C-B29A-3AEA-820B-BEC40AC1861A> /usr/lib/objc/libobjcMsgSend5.dylib
+       0x1d5724000 -        0x1d5724f2f  libobjcMsgSend6.dylib (973.1) <9BC523A3-E167-3F6C-8CAE-0F3EBA671791> /usr/lib/objc/libobjcMsgSend6.dylib
+       0x1dd724000 -        0x1dd724f2f  libobjcMsgSend7.dylib (973.1) <248B7BCE-5B4C-34C7-A340-43D5228628C5> /usr/lib/objc/libobjcMsgSend7.dylib
+       0x1e5724000 -        0x1e5724f2f  libobjcMsgSend8.dylib (973.1) <3E041BAD-A8E8-3069-B741-78CD1A45B176> /usr/lib/objc/libobjcMsgSend8.dylib
+       0x1ed724000 -        0x1ed724f2f  libobjcMsgSend9.dylib (973.1) <34A67969-21A0-39D6-BB81-8FDA5A2409DB> /usr/lib/objc/libobjcMsgSend9.dylib
+       0x1f5724000 -        0x1f5724f2f  libobjcMsgSend10.dylib (973.1) <678186C0-8EAD-3B35-8CBB-00285B41E4A0> /usr/lib/objc/libobjcMsgSend10.dylib
+       0x1fd724000 -        0x1fd724f2f  libobjcMsgSend11.dylib (973.1) <E05CB08C-E956-36FA-8967-AE8E346A8D2C> /usr/lib/objc/libobjcMsgSend11.dylib
+       0x225724000 -        0x225724f2f  libobjcMsgSend12.dylib (973.1) <10AB03AA-FF1F-3FDC-9DFB-BFC40042C501> /usr/lib/objc/libobjcMsgSend12.dylib
+       0x22d724000 -        0x22d724f2f  libobjcMsgSend13.dylib (973.1) <ABF53427-FA6F-3D0D-8F9D-7AD795CA5C92> /usr/lib/objc/libobjcMsgSend13.dylib
+       0x235724000 -        0x235724f2f  libobjcMsgSend14.dylib (973.1) <9A844C46-A6DA-34D4-8EBF-2AD775C30684> /usr/lib/objc/libobjcMsgSend14.dylib
+       0x23d724000 -        0x23d724f2f  libobjcMsgSend15.dylib (973.1) <7C995666-2B2D-3284-AA0A-EBF7C922838E> /usr/lib/objc/libobjcMsgSend15.dylib
+       0x245724000 -        0x245724f2f  libobjcMsgSend16.dylib (973.1) <B6C0E14B-53AE-3E22-9ED5-1729C49F46F2> /usr/lib/objc/libobjcMsgSend16.dylib
+       0x24d724000 -        0x24d724f2f  libobjcMsgSend17.dylib (973.1) <07B4CF85-251B-301B-832B-20B315A59E19> /usr/lib/objc/libobjcMsgSend17.dylib
+       0x255724000 -        0x255724f2f  libobjcMsgSend18.dylib (973.1) <43E575B7-04DB-3999-A633-1A3B638BA6E3> /usr/lib/objc/libobjcMsgSend18.dylib
+       0x25d724000 -        0x25d724f2f  libobjcMsgSend19.dylib (973.1) <736F4D85-76F7-3B28-8D87-C07E8F7A0EF4> /usr/lib/objc/libobjcMsgSend19.dylib
+       0x265724000 -        0x265724f2f  libobjcMsgSend20.dylib (973.1) <74E67C8B-6BCA-3184-A18E-A97F370052C6> /usr/lib/objc/libobjcMsgSend20.dylib
+       0x26d724000 -        0x26d724f2f  libobjcMsgSend21.dylib (973.1) <CC0D732F-98E7-3888-9E15-70984DA2FB04> /usr/lib/objc/libobjcMsgSend21.dylib
+       0x275724000 -        0x275724f2f  libobjcMsgSend22.dylib (973.1) <85A60286-5DE3-32BA-B18C-2A498B065C88> /usr/lib/objc/libobjcMsgSend22.dylib
+       0x27d724000 -        0x27d724f2f  libobjcMsgSend23.dylib (973.1) <5452A0D2-6B19-39BE-ADDD-80B7BCDE3A98> /usr/lib/objc/libobjcMsgSend23.dylib
+       0x285724000 -        0x285724f2f  libobjcMsgSend24.dylib (973.1) <94BBF2D6-722B-350D-8557-4D25A8E8D53A> /usr/lib/objc/libobjcMsgSend24.dylib
+       0x28d724000 -        0x28d724f2f  libobjcMsgSend25.dylib (973.1) <35481387-5A8E-3AE4-86A6-94CEB3CC8726> /usr/lib/objc/libobjcMsgSend25.dylib
+       0x2a5724000 -        0x2a5724f2f  libobjcMsgSend26.dylib (973.1) <9E0C8664-E7F4-39D1-AAFC-BD92B255E4E8> /usr/lib/objc/libobjcMsgSend26.dylib
+       0x2ad724000 -        0x2ad724f2f  libobjcMsgSend27.dylib (973.1) <FD424935-55A9-3650-955A-EED3441A1D19> /usr/lib/objc/libobjcMsgSend27.dylib
+       0x2b5724000 -        0x2b5724f2f  libobjcMsgSend28.dylib (973.1) <09BA7B97-7DF7-3C7F-932A-B6847662FC49> /usr/lib/objc/libobjcMsgSend28.dylib
+       0x2bd724000 -        0x2bd724f2f  libobjcMsgSend29.dylib (973.1) <36D5BA3F-2139-30B0-8558-556764BE9813> /usr/lib/objc/libobjcMsgSend29.dylib
+       0x2c5724000 -        0x2c5724f2f  libobjcMsgSend30.dylib (973.1) <9F05564A-9D12-372C-98FC-E9F0E6BE4F04> /usr/lib/objc/libobjcMsgSend30.dylib
+       0x2ca43e000 -        0x2ca444fe5  libRosetta.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/libRosetta.dylib
+       0x2cae2d000 -        0x2cae3075b  libsystem_darwindirectory.dylib (129.0.1) <61264923-2AA5-3658-B8C4-550C71E9D4B3> /usr/lib/system/libsystem_darwindirectory.dylib
+       0x2cae31000 -        0x2cae3bd9b  libsystem_eligibility.dylib (446.1.3) <EDDE8E9C-A2CF-3931-BBB3-321CB852EB30> /usr/lib/system/libsystem_eligibility.dylib
+       0x2cae3c000 -        0x2cae4542b  libsystem_sanitizers.dylib (32) <7138ED99-7AA0-34EA-B35B-20EF6ADB1EED> /usr/lib/system/libsystem_sanitizers.dylib
+       0x2cae46000 -        0x2cae46a13  libsystem_trial.dylib (511) <6AE48824-EC44-3A8C-B501-BE57DBE892E7> /usr/lib/system/libsystem_trial.dylib
+       0x2cd724000 -        0x2cd724f2f  libobjcMsgSend31.dylib (973.1) <0985E20F-78C3-3466-A2B2-DBB95F7104A3> /usr/lib/objc/libobjcMsgSend31.dylib
+       0x2d5724000 -        0x2d5724f2f  libobjcMsgSend32.dylib (973.1) <0D309D58-D576-3E5D-AD4B-6D55AB491702> /usr/lib/objc/libobjcMsgSend32.dylib
+       0x2dd724000 -        0x2dd724f2f  libobjcMsgSend33.dylib (973.1) <346E0484-48FA-369B-8A64-93B5F5341CFE> /usr/lib/objc/libobjcMsgSend33.dylib
+       0x2e5724000 -        0x2e5724f2f  libobjcMsgSend34.dylib (973.1) <6A31F809-BCBE-3E01-A367-E91FDACCE324> /usr/lib/objc/libobjcMsgSend34.dylib

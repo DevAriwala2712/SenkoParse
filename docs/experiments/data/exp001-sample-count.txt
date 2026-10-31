@@ -1,0 +1,9 @@
+Sort by top of stack, same collapsed (when >= 5):
+        _RNvXs_NtNtCs7tQSYhFT9Dl_6engine4exec3opsNtB4_4ScanNtB6_2Op4next  (in qe)        217
+        _RNvXs_NtNtCs7tQSYhFT9Dl_6engine4exec8hash_aggNtB4_7HashAggNtB6_2Op4next  (in qe)        105
+        _RNvXs2_NtNtCs3bJEMBXHbwl_4core3num11float_parsedNtNtNtB9_3str6traits7FromStr8from_str  (in qe)        100
+        _RNvNtNtCs3bJEMBXHbwl_4core3str8converts9from_utf8  (in qe)        88
+        _RNvNtNtCs7tQSYhFT9Dl_6engine7storage3csv10next_field  (in qe)        78
+        _platform_memcmp  (in libsystem_platform.dylib)        8
+        _platform_memmove  (in libsystem_platform.dylib)        5
+
