@@ -129,3 +129,43 @@ What reproduced and what did not (min wall, qe pipe vs DuckDB 2.0.0 pipe):
 
 Reproduced: flat qe memory (about 48 MiB here vs 42 MiB there; floors differ), DuckDB piped about 335-346 MiB, DuckDB piped temp growing with input (235 / 652 / 1890 / 5363 MiB), 0 temp by filename and for qe. Not reproduced: the size of the wall-time gap at 5x and 10x. DuckDB piped at 10x took 15.0-23.0 s here against 69.8-70.9 s on Linux, so the 14.6x is specific to that container (likely its temp-file I/O); the 6.0x here is itself a three-run figure with a wide DuckDB range. DuckDB by filename was 3.0 s at 10x (qe 1.2x faster).
 
+
+## File mode, `qe` vs DuckDB 2.0.0 — 1e8 rows (warm cache; cold pending)
+
+- machine: Apple M3 Pro, 11 cores, 18 GiB RAM, Darwin 27.0.0 (swap in use: 1.3 GiB of 2 GiB at the end of the run, see caveats)
+- date: 2026-11-01, qe release build of current `main`, DuckDB 2.0.0 (Python 3.11)
+- data: `scripts/gen_data.py --rows 1e8` (seed 42): x and big 5.55 GB each, medium 3.4 MB, small 1.9 KB. Q1-Q8 read 5.55 GB, Q9 reads 11.10 GB
+- harness: `bench/file_vs_duckdb.py` (raw: `docs/experiments/data/file1e8-raw.jsonl`), tables by `bench/summarize_file_bench.py`. DuckDB reads the CSVs with `read_csv` and explicit column types from `schema.toml`; default memory limit. 3 runs per cell, no run discarded; each query is run once on each engine for the correctness check just before, so its files are warm.
+- wall time = whole process (DuckDB includes Python start and `import duckdb`, about 0.07 s of setup plus interpreter; its in-process time is also shown). Output to /dev/null. RSS = child `ru_maxrss`.
+- correctness: all nine outputs compared before timing, sorted multiset, keys exact, other columns within 1e-9 relative; all nine match (Q4: 63,211,759 groups).
+- ratio < 1 means qe is faster.
+
+### warm cache, all cores
+
+| query | file GB | qe min s | qe med s | duckdb min s | duckdb med s | duckdb in-proc min s | qe/duckdb (min wall) | qe GB/s | duckdb GB/s | qe RSS MiB | duckdb RSS MiB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Q1 global agg | 5.55 | 1.37 | 1.37 | 1.48 | 1.59 | 1.32 | 0.92x | 4.06 | 3.75 | 5389 | 832 |
+| Q2 group id1 (10) | 5.55 | 1.33 | 1.35 | 1.68 | 1.72 | 1.50 | 0.79x | 4.17 | 3.29 | 5397 | 697 |
+| Q3 group id2 (1e4) | 5.55 | 5.82 | 6.19 | 1.92 | 1.96 | 1.77 | 3.03x | 0.95 | 2.89 | 7092 | 1119 |
+| Q4 group id3 (~6e6) | 5.55 | 15.02 | 15.12 | 4.14 | 4.27 | 3.90 | 3.63x | 0.37 | 1.34 | 7335 | 4527 |
+| Q5 group str id4 | 5.55 | 11.74 | 11.91 | 3.35 | 3.42 | 3.09 | 3.51x | 0.47 | 1.66 | 8275 | 4838 |
+| Q6 filter + agg | 5.55 | 1.54 | 1.55 | 1.70 | 1.79 | 1.51 | 0.91x | 3.59 | 3.26 | 5323 | 756 |
+| Q7 join small + grp | 5.55 | 1.67 | 1.67 | 1.75 | 1.76 | 1.56 | 0.95x | 3.33 | 3.16 | 5421 | 697 |
+| Q8 join medium + grp | 5.55 | 4.74 | 7.18 | 2.93 | 2.96 | 2.72 | 1.61x | 1.17 | 1.89 | 6641 | 1019 |
+| Q9 join big (1e7x1e7) | 11.10 | 85.39 | 124.89 | 5.23 | 7.38 | 4.90 | 16.32x | 0.13 | 2.12 | 8247 | 5177 |
+
+### warm cache, 1 thread each
+
+| query | file GB | qe min s | qe med s | duckdb min s | duckdb med s | duckdb in-proc min s | qe/duckdb (min wall) | qe GB/s | duckdb GB/s | qe RSS MiB | duckdb RSS MiB |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Q1 global agg | 5.55 | 9.17 | 9.35 | 7.86 | 7.90 | 7.69 | 1.17x | 0.60 | 0.71 | 5380 | 142 |
+| Q2 group id1 (10) | 5.55 | 7.87 | 7.98 | 8.98 | 9.14 | 8.80 | 0.88x | 0.71 | 0.62 | 5384 | 143 |
+| Q3 group id2 (1e4) | 5.55 | 16.32 | 20.91 | 10.24 | 10.47 | 10.05 | 1.59x | 0.34 | 0.54 | 6333 | 147 |
+| Q4 group id3 (~6e6) | 5.55 | 51.52 | 67.15 | 21.01 | 22.57 | 20.72 | 2.45x | 0.11 | 0.26 | 7621 | 4530 |
+| Q5 group str id4 | 5.55 | 36.25 | 36.81 | 14.66 | 14.91 | 14.44 | 2.47x | 0.15 | 0.38 | 8306 | 779 |
+| Q6 filter + agg | 5.55 | 11.23 | 11.33 | 8.91 | 8.93 | 8.73 | 1.26x | 0.49 | 0.62 | 5296 | 142 |
+| Q7 join small + grp | 5.55 | 10.49 | 10.64 | 9.32 | 9.58 | 9.14 | 1.13x | 0.53 | 0.60 | 5389 | 142 |
+| Q8 join medium + grp | 5.55 | 24.12 | 26.60 | 12.62 | 12.85 | 12.41 | 1.91x | 0.23 | 0.44 | 6046 | 174 |
+| Q9 join big (1e7x1e7) | 11.10 | 148.47 | 164.36 | 25.02 | 25.02 | 24.77 | 5.94x | 0.07 | 0.44 | 8150 | 4629 |
+
+Caveats: qe peak RSS includes the memory-mapped input (about 5.4 GB for a 5.55 GB file), so it is not comparable to DuckDB's RSS as "memory used". The machine has 18 GiB and swap was in use, so large-RSS cells (qe Q3, Q8, Q9; DuckDB Q4, Q5, Q9) may include memory-pressure effects; qe's run-to-run spread is large on Q3 (1t: 16-35 s), Q8 and Q9 (all cores: 85-135 s). Cold-cache runs are not done yet (need `sudo purge`).

@@ -55,9 +55,20 @@ Every claim we are willing to make, its scope, and the evidence. Anything not in
 | C9 | On the streaming query, `qe` wall time is lower than DuckDB's (piped: 4.8 s vs 69.8 s at 10x; by filename: 4.8 s vs 7.0 s; ratio 14.6x on the Linux container; re-run on an M3 Pro with DuckDB 2.0.0: 2.5 s vs 15.0 s at 10x, ratio 6.0x) | this query only, 1 thread each; memory and temp claims reproduced on a second machine, the 14.6x wall ratio did not (6.0x) | 🟡 not a general speed claim | [BENCHMARKS](../BENCHMARKS.md) |
 | C10 | Memory is bounded for **any** streamed query | | ❌ **not claimed**: group tables and join build sides grow with their own size | [ADR-0002](adr/0002-stream-first-direction.md) |
 | C11 | `f64` sums are bit-identical between stream mode and file mode | | ⚪ not tested (tolerance 1e-9 only) | [testing: gaps](testing.md#known-gaps) |
-| C12 | `qe` is faster than DuckDB on file mode | | ⚪ not measured | |
-| C13 | Cold-cache performance | | ⚪ not measured | |
+| C12 | `qe` is faster than DuckDB on file mode | ❌ **not true at 1e8**: warm, all cores, min wall, qe wins only Q1, Q2, Q6, Q7 (0.79-0.95x of DuckDB's time, Q7/Q1/Q6 within about 10%, a 3-run figure); loses Q3 3.0x, Q4 3.6x, Q5 3.5x, Q8 1.6x, Q9 16x. At 1 thread qe wins only Q2 (0.88x) | 1e8 rows (5.55 GB per table), Apple M3 Pro 18 GiB, DuckDB 2.0.0, 3 runs, queries Q1-Q9 of `bench/run.py`; swap was in use | [BENCHMARKS](../BENCHMARKS.md) |
+| C13 | Cold-cache performance | | ⚪ not measured yet (needs `sudo purge`; harness `file_vs_duckdb.py cold` is ready) | [BENCHMARKS](../BENCHMARKS.md) |
 | C14 | The reconstructed data matches the issue's data | | ⚪ it is our reconstruction; re-run with the issue's own generator | [EXP-005-stream](experiments/005-stream-memory.md#caveats) |
+
+## Where we lose (file mode, 1e8 rows, warm, min wall, qe time / DuckDB time)
+
+| Query | all cores | 1 thread | Likely area (not yet diagnosed, hypotheses only) |
+|---|---|---|---|
+| Q9 join big (1e8 x 1e8) | 16.3x | 5.9x | serial join build |
+| Q4 group id3 (63M groups) | 3.6x | 2.5x | high-cardinality GROUP BY |
+| Q5 group str id4 + COUNT(DISTINCT) | 3.5x | 2.5x | string keys / distinct |
+| Q3 group id2 (1e4 groups) | 3.0x | 1.6x | per-chunk partial tables (RSS +1.7 GB vs Q2); was equal to Q2 at 1e7 |
+| Q8 join medium + grp | 1.6x | 1.9x | not diagnosed |
+| Q1 at 1 thread, Q6, Q7 at 1 thread | 1.1-1.3x | | scan parse cost per core |
 
 ## Known limits
 
