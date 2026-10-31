@@ -7,7 +7,7 @@
 
 ## Context
 
-DuckDB issue #25165: `read_csv('/dev/stdin')` buffers the piped input and spills it to temp files, so
+DuckDB issue #25165 (retitled since: "read_csv over a pipe retains the columns the query projects; by filename the same query streams in constant memory"; the reporter later said temp use is bounded by the input, and ran DuckDB 1.5.5): `read_csv('/dev/stdin')` buffers the piped input and spills it to temp files, so
 temp use grows with input size. Reading the same data by filename uses flat memory.
 
 We reproduced it on DuckDB 2.0.0 with the issue's synthetic data (383 MB), a semi-join on a 50-id list,

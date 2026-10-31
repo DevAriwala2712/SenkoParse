@@ -37,7 +37,7 @@ DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains 
 <td width="50%"><img src="docs/img/stream-wall.svg" alt="Wall time versus piped input size, recorded Linux run with DuckDB 2.0.0"></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/img/stream-wall-mac.svg" alt="Wall time on an Apple M3 Pro with DuckDB 1.4.5"></td>
+<td width="50%"><img src="docs/img/stream-wall-mac.svg" alt="Wall time on an Apple M3 Pro with DuckDB 2.0.0"></td>
 <td width="50%"></td>
 </tr>
 </table>
