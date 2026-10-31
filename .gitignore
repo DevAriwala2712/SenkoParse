@@ -3,3 +3,4 @@ data/
 *.csv
 data_*/
 .worktrees/
+.claude/worktrees/
