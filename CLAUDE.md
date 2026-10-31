@@ -30,6 +30,8 @@ cargo test                                   # unit + differential tests (small 
 #   --stdin TABLE     read TABLE from stdin instead of TABLE.csv (schema still from schema.toml).
 #                     Tested (tests/stream.rs). Used at most once per query; never the join build side.
 gunzip -c big.csv.gz | ./target/release/qe --data data/ --stdin t "SELECT ..."
+#   --progress        live status line on stderr (TTY only; stdout unchanged)
+./demo.sh [--size 1x|2x|5x|10x | --replay FILE]   # qe-demo: live side-by-side dashboard vs DuckDB (crates/demo)
 python3 scripts/gen_data.py --rows 1e7       # db-benchmark-shaped data (x, small, medium, big tables)
 cargo test --release --test difftest -- --ignored   # randomized difftest vs SQLite, larger data
 python3 bench/run.py --rows 1e8              # timings vs DuckDB, appends to BENCHMARKS.md

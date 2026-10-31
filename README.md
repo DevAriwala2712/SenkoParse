@@ -81,6 +81,18 @@ gunzip -c big.csv.gz | ./target/release/qe --data data --stdin t "SELECT k, SUM(
 
 `--stdin t` reads table `t` from stdin; its schema still comes from `data/schema.toml`. Results are written (and flushed) as batches complete.
 
+`--progress` prints one live status line to stderr (about 10 times a second: bytes in, input MB/s, rows in, rows out, current RSS) when stderr is a terminal. Stdout is unchanged (tested byte for byte).
+
+### Live demo
+
+```bash
+./demo.sh                  # builds, checks prerequisites, runs qe-demo --size 5x
+./demo.sh --size 1x        # 1x, 2x, 5x or 10x of the EXP-005 data (generated once into .demo-data/)
+./demo.sh --replay docs/experiments/data/demo-live-5x.jsonl   # stage fallback: redraws a recorded live run
+```
+
+`qe-demo` pipes the same file into `qe --stdin` and into DuckDB (`bench/duckdb_run.py`) at the same time and draws, per engine, RSS against input GB, temp-dir size, bytes consumed and rows written; at the end it compares the two outputs by sorted row hash. DuckDB is optional (`DEMO_INSTALL_DUCKDB=1 ./demo.sh` installs it into `.demo-venv`); without it the DuckDB panel shows the recorded EXP-005 numbers, marked `*`. `--replay` on `exp005-stream-raw.jsonl` only has per-run totals (no time series), and says so. `--record FILE` saves a live run as a replayable time series. Same scope as EXP-005-stream: one query, one reconstructed data shape, bounded input buffering for this streaming join. The demo runs both engines on one machine at once, so its wall times are not the EXP-005 numbers and are not a speed claim.
+
 ### Options
 
 | Flag | Meaning | Results depend on it? |
