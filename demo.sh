@@ -33,7 +33,10 @@ if [ "$replay" = 0 ]; then
   fi
   if [ -z "$py" ] && [ "${DEMO_INSTALL_DUCKDB:-0}" = 1 ]; then
     echo "demo.sh: installing duckdb==2.0.0 into .demo-venv…"
-    python3 -m venv .demo-venv && .demo-venv/bin/pip install -q duckdb==2.0.0 && py=.demo-venv/bin/python
+    # duckdb 2.0.0 wheels need Python >= 3.10 (cp311 / abi3-cp312); the system python3 may be older (macOS: 3.9)
+    vpy=python3
+    for cand in python3.13 python3.12 python3.11 python3.10; do command -v "$cand" >/dev/null 2>&1 && { vpy="$cand"; break; }; done
+    "$vpy" -m venv .demo-venv && .demo-venv/bin/pip install -q duckdb==2.0.0 && py=.demo-venv/bin/python
   fi
   if [ -z "$py" ]; then
     echo "demo.sh: DuckDB (python package) not found: the DuckDB panel will show RECORDED numbers." >&2

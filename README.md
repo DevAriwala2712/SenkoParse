@@ -20,7 +20,7 @@
 
 `gunzip -c big.csv.gz | qe --stdin t "SELECT ..."` should run in memory that **does not grow with the input**.
 
-DuckDB issue #25165 reports that `read_csv('/dev/stdin')` buffers piped input and spills it to temp files. We reproduced it (DuckDB 2.0.0, `memory_limit=256MB`, 1 thread) and then measured `qe` on the same kind of query:
+DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains the projected columns, bounded by the input, where a filename read streams in constant memory) reports that `read_csv('/dev/stdin')` spills piped input to temp files. We reproduced it (DuckDB 2.0.0, `memory_limit=256MB`, 1 thread) and then measured `qe` on the same kind of query:
 
 | Piped input | SenkoParse peak RSS · temp | DuckDB piped peak RSS · temp | DuckDB by filename peak RSS · temp |
 |---|---|---|---|
@@ -42,7 +42,7 @@ DuckDB issue #25165 reports that `read_csv('/dev/stdin')` buffers piped input an
 </tr>
 </table>
 
-<sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run on an Apple M3 Pro with DuckDB 1.4.5 (the newest pip offers for macOS; 2.0.0 not available): 4.2x at 1x and 3.9x at 5x vs DuckDB piped (min wall). 10x not re-run on the Mac. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
+<sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run of the whole harness on an Apple M3 Pro (DuckDB 2.0.0, same data, byte-identical output digests): memory and temp results reproduce (SenkoParse 48 MiB, DuckDB piped about 340 MiB and 5.4 GB temp at 10x), but the wall-time ratio is smaller, **6.0x at 10x** (2.50 s vs 14.96 s; DuckDB piped varied 15–23 s). Treat the 14.6x as specific to the Linux container. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
 
 > **What this does and does not show.** It shows that for a streaming join against a small lookup table, input buffering is bounded. It does **not** show that every query is bounded: group tables and join build sides still grow with their own size (see [Limits](#limits)).
 
@@ -101,7 +101,7 @@ gunzip -c big.csv.gz | ./target/release/qe --data data --stdin t "SELECT k, SUM(
 
 #### Screenshots (MacBook Pro, Apple M3 Pro, 11 cores, 18 GiB; `./demo.sh`)
 
-DuckDB 2.0.0 could not be installed on this Mac (pip index stops at 1.4.5), so in the two live runs only SenkoParse is live. The DuckDB panel shows the recorded EXP-005-stream numbers, marked `*`, and the row-hash check did not run (row counts only). Wall times are not a speed claim. The 5x replay is the recorded Linux run (4 cores), not this Mac.
+DuckDB was not installed in the environment of these two live runs (the default `python3` there was 3.9, which has no DuckDB 2.0.0 wheel; 2.0.0 does install on Python 3.11), so in them only SenkoParse is live. The DuckDB panel shows the recorded EXP-005-stream numbers, marked `*`, and the row-hash check did not run (row counts only). Wall times are not a speed claim. The 5x replay is the recorded Linux run (4 cores), not this Mac.
 
 | Run | Screenshot |
 |---|---|

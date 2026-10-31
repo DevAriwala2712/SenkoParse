@@ -94,5 +94,7 @@ Interpretation:
 - DuckDB's by-filename RSS here (216-250 MiB) is higher than the 144 MiB in the ADR's reproduction; the piped value
   (337 MiB) is close to the ADR's 324 MiB. The differences are not explained: this DuckDB run goes through
   Python (interpreter included), the ADR's setup is not recorded in the repo.
+- **Second machine (2026-11-01):** the full harness was re-run on an Apple M3 Pro with DuckDB 2.0.0 (`data/exp005-mac-m3pro-raw.jsonl`). Output digests are identical to this run; memory and temp results reproduce; DuckDB piped wall time at 10x was 15-23 s instead of 69.8-70.9 s, so the wall-time ratio (14.6x here) was 6.0x there. See BENCHMARKS.md.
+- DuckDB issue #25165 has been retitled since the ADR; its current claim is that a pipe retains the projected columns (bounded by the input) while a filename read streams in constant memory. The issue's own numbers are for DuckDB 1.5.5 and a 574.5 MiB file (389.1 MiB temp piped, 0 by filename); the ADR's "383 MB" and 144/324 MiB figures are not in the issue and were not re-checked.
 - DuckDB is driven from Python, so its RSS includes the interpreter (about 25-40 MiB); this favours SenkoParse.
 - Group tables and join build sides are not bounded; this query has neither a large one.

@@ -76,8 +76,12 @@ def main():
     a = ap.parse_args()
     os.makedirs(a.work, exist_ok=True)
     ver = subprocess.run([a.duckdb_python, "-c", "import duckdb;print(duckdb.__version__)"], capture_output=True, text=True).stdout.strip()
-    cpu = next((l.split(":")[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name")), "?")
-    mem = next((l.split()[1] for l in open("/proc/meminfo") if l.startswith("MemTotal")), "?")
+    if sys.platform == "darwin":
+        sysctl = lambda k: subprocess.run(["sysctl", "-n", k], capture_output=True, text=True).stdout.strip()
+        cpu, mem = sysctl("machdep.cpu.brand_string"), int(sysctl("hw.memsize")) // 1024
+    else:
+        cpu = next((l.split(":")[1].strip() for l in open("/proc/cpuinfo") if l.startswith("model name")), "?")
+        mem = next((l.split()[1] for l in open("/proc/meminfo") if l.startswith("MemTotal")), "?")
     commit = subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
     print(f"machine: {platform.platform()}, {cpu}, {os.cpu_count()} cores, {int(mem)//1024} MiB RAM")
     print(f"qe commit {commit}; duckdb {ver}; python {platform.python_version()}; DuckDB: memory_limit=256MB threads=1; qe: --threads 1, default 4 MiB blocks")

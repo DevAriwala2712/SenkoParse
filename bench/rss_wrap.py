@@ -7,4 +7,6 @@ inflates every child. This wrapper stays tiny (a ~10 MiB floor, see EXP-005-stre
 import json, os, sys
 pid = os.posix_spawnp(sys.argv[2], sys.argv[2:], os.environ)
 _, status, ru = os.wait4(pid, 0)
-open(sys.argv[1], "w").write(json.dumps({"status": status, "maxrss_kib": ru.ru_maxrss}))
+# ru_maxrss is KiB on Linux but bytes on macOS
+maxrss_kib = ru.ru_maxrss // 1024 if sys.platform == "darwin" else ru.ru_maxrss
+open(sys.argv[1], "w").write(json.dumps({"status": status, "maxrss_kib": maxrss_kib}))

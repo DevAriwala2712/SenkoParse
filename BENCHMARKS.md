@@ -97,17 +97,35 @@ Output rows were compared as sorted multisets and are identical across the three
 
 **Ratio at 10x:** 69.843 s / 4.78 s = 14.6x (qe pipe vs DuckDB 2.0.0 pipe, min wall). The "69" in the wall-time chart is DuckDB's time in seconds, not a speedup.
 
-### Re-run on Apple M3 Pro, DuckDB 1.4.5 (2026-11-01)
+### Re-run of the full harness on Apple M3 Pro, DuckDB 2.0.0 (2026-11-01)
 
-Same query and settings (1 thread each, DuckDB `memory_limit=256MB`), data from `.demo-data`, 2 runs per cell, wall and peak RSS from `/usr/bin/time -l`. DuckDB 1.4.5 is the newest pip release available for macOS; this is not the 2.0.0 of the table above. Peak temp use was not measured. Sorted output hashes of the three engines are identical at 5x; row counts are identical at 1x.
+`bench/exp005_stream.py`, same data (`bench/gen_stream_data.py`, seed 42; 1x is byte-identical to the Linux data), same settings (1 thread each, DuckDB `memory_limit=256MB`), 3 runs per cell, qe commit b205df1, macOS 27.0.1, 11 cores, 18 GiB, DuckDB 2.0.0 on Python 3.11 (the harness itself ran on 3.9; measurement floor 1.0 MiB). Raw: `docs/experiments/data/exp005-mac-m3pro-raw.jsonl`, console: `docs/experiments/data/exp005-mac-m3pro-output.txt`, chart: `docs/img/stream-wall-mac.svg`.
 
-| size | engine | wall s | peak RSS MiB |
-|---|---|---|---|
-| 1x | qe pipe | 0.25–0.29 | 46–47 |
-| 1x | duckdb 1.4.5 pipe | 1.06–1.07 | 301 |
-| 1x | duckdb 1.4.5 file | 0.49 | 106 |
-| 5x | qe pipe | 1.25–1.29 | 49–50 |
-| 5x | duckdb 1.4.5 pipe | 4.83–5.78 | 304–308 |
-| 5x | duckdb 1.4.5 file | 2.13 | 106–107 |
+| size | input MB | engine | wall s (min/med/max) | peak RSS MiB (min/med/max) | peak temp MiB (max) | output rows |
+|---|---|---|---|---|---|---|
+| 1x | 375 | qe pipe | 0.275/0.277/0.763 | 48.4/48.4/49.4 | 0.0 | 54986 |
+| 1x | 375 | duckdb pipe | 0.926/0.946/1.005 | 340.6/341.4/342.1 | 235.1 | 54986 |
+| 1x | 375 | duckdb file | 0.41/0.411/0.415 | 128.1/128.4/128.5 | 0.0 | 54986 |
+| 2x | 750 | qe pipe | 0.534/0.535/0.585 | 47.4/47.5/66.3 | 0.0 | 109972 |
+| 2x | 750 | duckdb pipe | 1.802/1.806/2.054 | 334.6/336.0/338.3 | 652.4 | 109972 |
+| 2x | 750 | duckdb file | 0.687/0.689/0.693 | 141.9/142.0/142.2 | 0.0 | 109972 |
+| 5x | 1874 | qe pipe | 1.231/1.27/1.283 | 47.6/47.6/47.6 | 0.0 | 274930 |
+| 5x | 1874 | duckdb pipe | 4.306/4.352/4.419 | 345.4/345.4/345.6 | 1890.3 | 274930 |
+| 5x | 1874 | duckdb file | 1.523/1.526/1.53 | 129.6/129.6/129.7 | 0.0 | 274930 |
+| 10x | 3749 | qe pipe | 2.495/2.541/2.56 | 48.7/48.7/48.7 | 0.0 | 549860 |
+| 10x | 3749 | duckdb pipe | 14.959/17.572/23.015 | 339.1/344.9/346.1 | 5363.0 | 549860 |
+| 10x | 3749 | duckdb file | 2.957/3.199/3.346 | 136.4/136.5/137.0 | 0.0 | 549860 |
 
-qe vs DuckDB piped (min wall): 4.2x at 1x and 3.9x at 5x. Raw runs: `docs/experiments/data/exp005-mac-m3pro-duckdb145.jsonl`; chart: `docs/img/stream-wall-mac.svg`. The 14.6x at 10x depends on DuckDB 2.0.0's piped slowdown growing with input size and was not reproduced on the Mac.
+Output row digests are identical across the three engines, and identical to the Linux run's digests, at every size.
+
+What reproduced and what did not (min wall, qe pipe vs DuckDB 2.0.0 pipe):
+
+| size | Linux 4-core | M3 Pro |
+|---|---|---|
+| 1x | 3.7x | 3.4x |
+| 2x | 4.1x | 3.4x |
+| 5x | 7.2x | 3.5x |
+| 10x | 14.6x | 6.0x |
+
+Reproduced: flat qe memory (about 48 MiB here vs 42 MiB there; floors differ), DuckDB piped about 335-346 MiB, DuckDB piped temp growing with input (235 / 652 / 1890 / 5363 MiB), 0 temp by filename and for qe. Not reproduced: the size of the wall-time gap at 5x and 10x. DuckDB piped at 10x took 15.0-23.0 s here against 69.8-70.9 s on Linux, so the 14.6x is specific to that container (likely its temp-file I/O); the 6.0x here is itself a three-run figure with a wide DuckDB range. DuckDB by filename was 3.0 s at 10x (qe 1.2x faster).
+
