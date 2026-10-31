@@ -22,6 +22,9 @@ pub struct Options {
     /// Target bytes per scan chunk (default 16 MiB). Results never depend on this either; tests shrink it
     /// to force chunk boundaries inside quoted fields.
     pub chunk_bytes: Option<usize>,
+    /// Use the partition-wise parallel merge for single-integer-key aggregates once the per-chunk tables
+    /// hold more than this many groups in total (default 262,144). Tests set 0 to force it.
+    pub agg_partition_groups: Option<usize>,
 }
 
 pub struct Prepared {

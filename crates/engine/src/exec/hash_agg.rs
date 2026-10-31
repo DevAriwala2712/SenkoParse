@@ -182,13 +182,27 @@ fn finish(st: &St, call: &AggCall) -> Result<Value> {
 /// merging in a fixed order is what makes float results independent of the thread count.
 fn merge_state(a: &mut St, b: St, call: &AggCall) {
     match (a, b) {
+        (St::Distinct(x), St::Distinct(mut y)) => {
+            // owned: move the smaller set into the larger one
+            if x.len() < y.len() {
+                std::mem::swap(x, &mut y);
+            }
+            x.extend(y.drain());
+        }
+        (a, b) => merge_state_ref(a, &b, call),
+    }
+}
+
+/// Same as `merge_state` but `b` stays in place (used when several tasks read the same source table).
+fn merge_state_ref(a: &mut St, b: &St, call: &AggCall) {
+    match (a, b) {
         (St::Count(x), St::Count(y)) => *x += y,
         (St::SumI { s, any }, St::SumI { s: s2, any: a2 }) => {
             *s += s2;
             *any |= a2;
         }
         (St::SumF { s, c, any }, St::SumF { s: s2, c: c2, any: a2 }) => {
-            kadd(s, c, s2);
+            kadd(s, c, *s2);
             *c += c2;
             *any |= a2;
         }
@@ -197,7 +211,7 @@ fn merge_state(a: &mut St, b: St, call: &AggCall) {
             *n += n2;
         }
         (St::AvgF { s, c, n }, St::AvgF { s: s2, c: c2, n: n2 }) => {
-            kadd(s, c, s2);
+            kadd(s, c, *s2);
             *c += c2;
             *n += n2;
         }
@@ -205,30 +219,38 @@ fn merge_state(a: &mut St, b: St, call: &AggCall) {
             let want_min = call.func == AggFunc::Min;
             match (&mut *m, o) {
                 (_, Mm::None) => {}
-                (m @ Mm::None, o) => *m = o,
+                (m @ Mm::None, o) => {
+                    *m = match o {
+                        Mm::I(v) => Mm::I(*v),
+                        Mm::F(v) => Mm::F(*v),
+                        Mm::S(v) => Mm::S(v.clone()),
+                        Mm::None => Mm::None,
+                    }
+                }
                 (Mm::I(x), Mm::I(y)) => {
-                    if (want_min && y < *x) || (!want_min && y > *x) {
-                        *x = y
+                    if (want_min && y < x) || (!want_min && y > x) {
+                        *x = *y
                     }
                 }
                 (Mm::F(x), Mm::F(y)) => {
-                    if (want_min && y < *x) || (!want_min && y > *x) {
-                        *x = y
+                    if (want_min && y < x) || (!want_min && y > x) {
+                        *x = *y
                     }
                 }
                 (Mm::S(x), Mm::S(y)) => {
-                    if (want_min && y < *x) || (!want_min && y > *x) {
-                        *x = y
+                    if (want_min && y < x) || (!want_min && y > x) {
+                        x.clone_from(y)
                     }
                 }
                 _ => unreachable!("min/max type mismatch"),
             }
         }
-        (St::Distinct(x), St::Distinct(mut y)) => {
-            if x.len() < y.len() {
-                std::mem::swap(x, &mut y);
+        (St::Distinct(x), St::Distinct(y)) => {
+            for k in y.iter() {
+                if !x.contains(k) {
+                    x.insert(k.clone());
+                }
             }
-            x.extend(y.drain());
         }
         _ => unreachable!("aggregate state mismatch"),
     }
@@ -424,6 +446,58 @@ impl AggTable {
         }
     }
 
+    /// Number of hash partitions for the partition-wise merge (fixed: independent of the thread count).
+    pub const PARTS: usize = 64;
+
+    #[inline]
+    fn part_of(k: i64) -> usize {
+        // different multiplier than `IntMap`'s, so partition bits are independent of table-index bits
+        (((k as u64) ^ ((k as u64) >> 29)).wrapping_mul(0xD6E8_FEB8_6659_FD93) >> 58) as usize
+    }
+
+    /// Group ids bucketed by partition, each bucket in ascending group id (first-seen) order.
+    fn int_buckets(&self) -> Vec<Vec<u32>> {
+        let mut b = vec![Vec::new(); Self::PARTS];
+        for g in 0..self.ngroups {
+            let p = if Some(g as u32) == self.null_gid { 0 } else { Self::part_of(self.ikeys[g]) };
+            b[p].push(g as u32);
+        }
+        b
+    }
+
+    /// Fold group `og` of `other` (int mode) into this table, leaving `other` untouched.
+    fn merge_one_int(&mut self, other: &AggTable, og: usize) {
+        let na = self.spec.aggs.len();
+        let t = if Some(og as u32) == other.null_gid {
+            match self.null_gid {
+                Some(g) => g,
+                None => {
+                    self.ikeys.push(0);
+                    let g = self.new_group();
+                    self.null_gid = Some(g);
+                    self.key_out[0].push_from(&other.key_out[0], og);
+                    g
+                }
+            }
+        } else {
+            let k = other.ikeys[og];
+            match self.imap.find(k, &self.ikeys) {
+                Some(g) => g,
+                None => {
+                    self.ikeys.push(k);
+                    let g = self.new_group();
+                    self.imap.insert(g, &self.ikeys);
+                    self.key_out[0].push_from(&other.key_out[0], og);
+                    g
+                }
+            }
+        } as usize;
+        let spec = self.spec.clone();
+        for (j, call) in spec.aggs.iter().enumerate() {
+            merge_state_ref(&mut self.states[t * na + j], &other.states[og * na + j], call);
+        }
+    }
+
     /// Final output columns (keys first, then aggregates) and the group count.
     pub fn finish(mut self) -> Result<(Vec<Column>, usize)> {
         let na = self.spec.aggs.len();
@@ -452,7 +526,35 @@ pub enum AggInput {
 pub struct HashAgg {
     input: Option<AggInput>,
     spec: Arc<AggSpec>,
-    out: Option<(Vec<Column>, usize, usize)>,
+    /// Finished result, as one or more column segments emitted in order (one segment per partition on the
+    /// partition-wise path, so nothing is concatenated).
+    out: Option<Segments>,
+}
+
+struct Segments {
+    segs: Vec<(Vec<Column>, usize)>,
+    seg: usize,
+    pos: usize,
+}
+
+/// Merge per-chunk tables by key partition: each partition is folded by one task, walking the tables in chunk
+/// order, so there is no serial tail and the result does not depend on the thread count.
+fn partitioned_merge(ctx: &ExecCtx, spec: &Arc<AggSpec>, tables: Vec<AggTable>) -> Result<Vec<(Vec<Column>, usize)>> {
+    ctx.run(|| {
+        let buckets: Vec<Vec<Vec<u32>>> = tables.par_iter().map(|t| t.int_buckets()).collect();
+        (0..AggTable::PARTS)
+            .into_par_iter()
+            .map(|p| {
+                let mut part = AggTable::new(spec.clone());
+                for (c, t) in tables.iter().enumerate() {
+                    for &og in &buckets[c][p] {
+                        part.merge_one_int(t, og as usize);
+                    }
+                }
+                part.finish()
+            })
+            .collect::<Result<Vec<_>>>()
+    })
 }
 
 impl HashAgg {
@@ -485,6 +587,12 @@ impl HashAgg {
                         })
                         .collect::<Result<Vec<_>>>()
                 })?;
+                let total: usize = tables.iter().map(|t| t.ngroups).sum();
+                if tables.len() > 1 && tables[0].int_mode && total > ctx.agg_partition_groups {
+                    let segs = partitioned_merge(&ctx, &spec, tables)?;
+                    self.out = Some(Segments { segs, seg: 0, pos: 0 });
+                    return Ok(());
+                }
                 // Fixed-shape pairwise tree merge: the merge order depends only on the chunk count,
                 // never on how many threads ran, so float sums are reproducible.
                 ctx.run(|| {
@@ -516,7 +624,7 @@ impl HashAgg {
             }
         };
         let (cols, n) = table.finish()?;
-        self.out = Some((cols, 0, n));
+        self.out = Some(Segments { segs: vec![(cols, n)], seg: 0, pos: 0 });
         Ok(())
     }
 }
@@ -526,13 +634,19 @@ impl Op for HashAgg {
         if self.out.is_none() {
             self.run()?;
         }
-        let (cols, pos, n) = self.out.as_mut().unwrap();
-        if *pos >= *n {
-            return Ok(None);
+        let o = self.out.as_mut().unwrap();
+        while o.seg < o.segs.len() {
+            let (cols, n) = &o.segs[o.seg];
+            if o.pos >= *n {
+                o.seg += 1;
+                o.pos = 0;
+                continue;
+            }
+            let len = (*n - o.pos).min(BATCH_ROWS);
+            let b = Batch { cols: cols.iter().map(|c| Arc::new(c.slice(o.pos, len))).collect(), len };
+            o.pos += len;
+            return Ok(Some(b));
         }
-        let len = (*n - *pos).min(BATCH_ROWS);
-        let b = Batch { cols: cols.iter().map(|c| Arc::new(c.slice(*pos, len))).collect(), len };
-        *pos += len;
-        Ok(Some(b))
+        Ok(None)
     }
 }

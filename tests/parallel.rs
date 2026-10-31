@@ -143,3 +143,61 @@ fn integer_like_group_keys_match_reference_including_order() {
         }
     }
 }
+
+fn sorted(mut r: Vec<Vec<Value>>) -> Vec<Vec<Value>> {
+    r.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+    r
+}
+
+/// Partition-wise merge (forced with `agg_partition_groups = 0`): same groups and values as the reference
+/// (order may differ: partition order), identical for every thread count, NULL / decimal / date keys included.
+#[test]
+fn partitioned_merge_matches_reference_and_is_thread_independent() {
+    let mut x: u64 = 0xABCD_EF01_2345_6789;
+    let mut csv = String::from("id,g,p,d,v,f\n");
+    for i in 0..8000 {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        let g = if x % 9 == 0 { String::new() } else { ((x >> 8) % 4000).to_string() };
+        let p = if x % 13 == 0 { String::new() } else { format!("{}.{:02}", (x >> 20) % 40, (x >> 30) % 100) };
+        let d = if x % 17 == 0 { String::new() } else { format!("2022-{:02}-{:02}", 1 + (x >> 12) % 12, 1 + (x >> 24) % 28) };
+        let v = if x % 7 == 0 { String::new() } else { ((x >> 33) % 1000).to_string() };
+        let f = ((x >> 11) % 100000) as f64 / 7.0 * if x % 2 == 0 { 1e6 } else { 1e-3 };
+        csv.push_str(&format!("{i},{g},{p},{d},{v},{f}\n"));
+    }
+    let schema = "[t]\nid = \"i64\"\ng = \"i64\"\np = \"decimal(2)\"\nd = \"date\"\nv = \"i64\"\nf = \"f64\"\n";
+    let d = dir("partmerge", &csv, schema);
+    let queries = [
+        "SELECT g, COUNT(*), SUM(v), MIN(v), MAX(v), COUNT(DISTINCT id), AVG(v) FROM t GROUP BY g",
+        "SELECT p, COUNT(*), SUM(v) FROM t GROUP BY p",
+        "SELECT d, COUNT(*), SUM(v), MAX(f) FROM t GROUP BY d",
+        "SELECT id, SUM(f) FROM t GROUP BY id",
+        "SELECT g, SUM(f), AVG(f) FROM t GROUP BY g",
+    ];
+    let forced = |threads: usize, chunk: usize| Options {
+        threads: Some(threads),
+        chunk_bytes: Some(chunk),
+        agg_partition_groups: Some(0),
+        ..Default::default()
+    };
+    for q in queries {
+        let want = sorted(run(&d, q, Options { no_opt: true, ..Default::default() }).unwrap());
+        let base = run(&d, q, forced(1, 700)).unwrap_or_else(|e| panic!("{q}: {e}"));
+        for threads in [1, 2, 5, 11] {
+            let got = run(&d, q, forced(threads, 700)).unwrap();
+            assert_eq!(got, base, "threads={threads}: {q} (must be identical, including order and float bits)");
+        }
+        // vs reference: same groups; integer results exact, float results within 1e-9 relative
+        let got = sorted(base);
+        assert_eq!(got.len(), want.len(), "{q}");
+        for (a, b) in got.iter().zip(&want) {
+            for (x, y) in a.iter().zip(b) {
+                match (x, y) {
+                    (Value::F64(x), Value::F64(y)) => assert!((x - y).abs() <= 1e-9 * x.abs().max(y.abs()).max(1.0), "{q}: {x} vs {y}"),
+                    _ => assert_eq!(x, y, "{q}"),
+                }
+            }
+        }
+    }
+}

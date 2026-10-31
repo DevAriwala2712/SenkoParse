@@ -28,6 +28,7 @@ pub struct ExecCtx {
     pool: Option<rayon::ThreadPool>,
     pub chunk_bytes: usize,
     pub threads: usize,
+    pub agg_partition_groups: usize,
 }
 
 impl ExecCtx {
@@ -45,6 +46,7 @@ impl ExecCtx {
             pool,
             chunk_bytes: opts.chunk_bytes.unwrap_or(DEFAULT_CHUNK_BYTES),
             threads: opts.threads.unwrap_or_else(rayon::current_num_threads).max(1),
+            agg_partition_groups: opts.agg_partition_groups.unwrap_or(262_144),
         })
     }
 
