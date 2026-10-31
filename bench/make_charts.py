@@ -112,8 +112,8 @@ def main():
                "Line chart. SenkoParse takes 0.55 to 4.8 seconds; DuckDB by filename 0.9 to 7; DuckDB piped 2 to 70 seconds.",
                "Seconds, min of 3, 1 thread, Linux 4-core. At 3.7 GB: 4.78 s vs 69.8 s = 14.6x. One query.",
                xs, [dict(name="DuckDB 2.0.0 piped", c=ORANGE, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s) for s, _ in sizes]),
-                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb file" and r["size"] == s) for s, _ in sizes], dy=-6),
-                    dict(name="qe --stdin", c=BLUE, y=[min(r["wall_s"] for r in raw if r["engine"] == "qe pipe" and r["size"] == s) for s, _ in sizes], dy=12)],
+                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb file" and r["size"] == s) for s, _ in sizes], dy=-24),
+                    dict(name="qe --stdin", c=BLUE, y=[min(r["wall_s"] for r in raw if r["engine"] == "qe pipe" and r["size"] == s) for s, _ in sizes], dy=2)],
                "piped input size", "wall time (s)", gb, ymax=80)
     mac = [json.loads(l) for l in open(f"{ROOT}/docs/experiments/data/exp005-mac-m3pro-raw.jsonl")]
     mw = lambda e: [min(r["wall_s"] for r in mac if r["engine"] == e and r["size"] == s) for s, _ in sizes]
@@ -121,8 +121,8 @@ def main():
                "Line chart, Apple M3 Pro, DuckDB 2.0.0. SenkoParse takes 0.28 to 2.5 seconds; DuckDB by filename 0.4 to 3.0; DuckDB piped 0.9 to 15 seconds.",
                "Seconds, min of 3, 1 thread, M3 Pro. At 3.7 GB: 2.50 s vs 14.96 s = 6.0x. One query.",
                xs, [dict(name="DuckDB 2.0.0 piped", c=ORANGE, y=mw("duckdb pipe")),
-                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=mw("duckdb file"), dy=-6),
-                    dict(name="qe --stdin", c=BLUE, y=mw("qe pipe"), dy=12)],
+                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=mw("duckdb file"), dy=-24),
+                    dict(name="qe --stdin", c=BLUE, y=mw("qe pipe"), dy=2)],
                "piped input size", "wall time (s)", gb, ymax=20)
     cats = ["Q1 global aggregate", "Q2 group by id1 (10)", "Q3 group by id2 (1e4)", "Q4 group by id3 (6e6)", "Q5 group by string id4",
             "Q6 filter + aggregate", "Q7 join small + group", "Q8 join medium + group", "Q9 join big (1e7 x 1e7)"]
