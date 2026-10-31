@@ -27,6 +27,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--rows", type=int, default=1_100_000)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--sizes", default="1,2,5,10", help="which a_<k>x.csv files to write (default: all four)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     rng = random.Random(a.seed)
@@ -50,7 +51,8 @@ def main():
             f.write("".join(out))
             done += n
     header = ",".join(COLS) + "\n"
-    for k in (1, 2, 5, 10):
+    sizes = [int(k) for k in a.sizes.split(",")]
+    for k in sizes:
         with open(f"{a.out}/a_{k}x.csv", "w") as f:
             f.write(header)
             for _ in range(k):
@@ -58,7 +60,7 @@ def main():
                     while chunk := b.read(1 << 24):
                         f.write(chunk)
     os.remove(body)
-    for k in (1, 2, 5, 10):
+    for k in sizes:
         print(f"a_{k}x.csv {os.path.getsize(f'{a.out}/a_{k}x.csv') / 1e6:.1f} MB")
 
 if __name__ == "__main__":
