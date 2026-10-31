@@ -8,6 +8,8 @@
 //! inserted into SQLite, so the test needs no CSV parser of its own. Comparison rules (CLAUDE.md):
 //! NULL = NULL, unordered results compare as multisets, numbers with relative tolerance 1e-9
 //! (integers exactly when both sides are integers).
+mod common;
+use common::Dribble;
 use engine::types::{fmt_date, fmt_dec, Value};
 use rusqlite::{types::Value as SqlVal, types::ValueRef, Connection};
 use std::collections::BTreeMap;
@@ -687,6 +689,7 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
 
     let mut failures = Vec::new();
     let mut nonempty = 0;
+    let (mut stream_ran, mut stream_skipped) = (0usize, 0usize);
     for qi in 0..queries {
         let (sql, ordered) = gen_query(&mut rng, &tabs);
         let want = match sqlite_rows(&conn, &sql) {
@@ -703,7 +706,35 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
             &sql,
             &engine::Options { threads: Some(3), chunk_bytes: Some(256), agg_partition_groups: Some(0), ..Default::default() },
         );
-        for (label, res) in [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks/forced partitioned merge", stress)] {
+        // stream configuration: the FROM table is read as a stream (random 1..=300-byte reads, 37-byte blocks)
+        // in both the default and the --no-opt engine. Queries that hit a documented streaming limit are
+        // skipped and counted.
+        let ftable = sql.split(" FROM ").nth(1).and_then(|r| r.split_whitespace().next()).unwrap().to_string();
+        let mut stream_runs = Vec::new();
+        for (label, no_opt) in [("stream/37B blocks", false), ("stream/--no-opt", true)] {
+            let csv = std::fs::read(dir.join(format!("{ftable}.csv"))).unwrap();
+            let o = engine::Options { chunk_bytes: Some(37), no_opt, ..Default::default() };
+            let r = engine::run_collect_stream(
+                &dir,
+                &sql,
+                &o,
+                &ftable,
+                Box::new(Dribble::new(&csv, seed * 1000 + qi as u64)),
+            );
+            match r {
+                Err(e) if e.0.contains("cannot be the right side of a LEFT JOIN") || e.0.contains("can be scanned only once") => {
+                    stream_skipped += 1
+                }
+                r => {
+                    stream_ran += 1;
+                    stream_runs.push((label, r))
+                }
+            }
+        }
+        for (label, res) in [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks/forced partitioned merge", stress)]
+            .into_iter()
+            .chain(stream_runs)
+        {
           match res {
             Err(e) => failures.push(format!("[seed {seed} q{qi}] {label} engine error: {e}\n  {sql}")),
             Ok((_, got)) => {
@@ -722,7 +753,9 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
         }
     }
     assert!(failures.is_empty(), "\n{}\n(data dir: {})", failures.join("\n\n"), dir.display());
-    eprintln!("difftest seed {seed}: {queries} queries OK ({nonempty} with non-empty results)");
+    eprintln!(
+        "difftest seed {seed}: {queries} queries OK ({nonempty} with non-empty results; stream runs: {stream_ran} compared, {stream_skipped} skipped for documented streaming limits)"
+    );
 }
 
 #[test]
