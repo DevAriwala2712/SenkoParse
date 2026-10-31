@@ -1,0 +1,21 @@
+[workspace]
+members = ["crates/engine", "crates/cli"]
+default-members = [".", "crates/engine", "crates/cli"]
+resolver = "2"
+
+# Root package exists only to host tests/difftest.rs (SQLite is a dev-only oracle).
+[package]
+name = "qe-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+engine = { path = "crates/engine" }
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+debug = 1
