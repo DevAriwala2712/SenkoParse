@@ -1,0 +1,11 @@
+[package]
+name = "qe"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "qe"
+path = "src/main.rs"
+
+[dependencies]
+engine = { path = "../engine" }
