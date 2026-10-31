@@ -1,6 +1,6 @@
 target/
-data/
+/data/
 *.csv
-data_*/
+/data_*/
 .worktrees/
 .claude/worktrees/

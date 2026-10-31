@@ -1,0 +1,13 @@
+   Compiling qe-tests v0.1.0 (/Users/devariwala/Desktop/ps10)
+    Finished `release` profile [optimized + debuginfo] target(s) in 7.00s
+     Running tests/difftest.rs (target/release/deps/difftest-de2d23b0ce396a36)
+
+running 1 test
+difftest seed 1000: 800 queries OK (2139 with non-empty results)
+test difftest_large has been running for over 60 seconds
+difftest seed 1001: 800 queries OK (2085 with non-empty results)
+difftest seed 1002: 800 queries OK (2103 with non-empty results)
+test difftest_large ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 108.00s
+

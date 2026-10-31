@@ -1,0 +1,12 @@
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.02s
+     Running tests/difftest.rs (target/release/deps/difftest-a10a99618f63545a)
+
+running 1 test
+difftest seed 1000: 1000 queries OK (1790 with non-empty results)
+difftest seed 1001: 1000 queries OK (1750 with non-empty results)
+test difftest_large has been running for over 60 seconds
+difftest seed 1002: 1000 queries OK (1750 with non-empty results)
+test difftest_large ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 77.53s
+

@@ -1,0 +1,494 @@
+Analysis of sampling qe (pid 41203) every 1 millisecond
+Process:         qe [41203]
+Path:            /Users/USER/Desktop/*/qe
+Load Address:    0x100f8c000
+Identifier:      qe
+Version:         0
+Code Type:       ARM64
+Platform:        macOS
+Parent Process:  zsh [41202]
+Target Type:     live task
+
+Date/Time:       2026-10-31 21:09:09.508 +0530
+Launch Time:     2026-10-31 21:09:09.184 +0530
+OS Version:      macOS 27.0.1 (26A434)
+Report Version:  7
+Analysis Tool:   /usr/bin/sample
+
+Physical footprint:         1.4G
+Physical footprint (peak):  1.4G
+Idle exit:                  untracked
+----
+
+Call graph:
+    690 Thread_10318922   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 690 start  (in dyld) + 6688  [0x19dbdbe80]
+    +   690 main  (in qe) + 852  [0x100f8f0ec]
+    +     690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceFEuuECsgJ4wYTXidDx_2qe  (in qe) + 12  [0x100f8c88c]  backtrace.rs:166
+    +       471 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 1640  [0x100f8d1bc]  main.rs:25
+    +       ! 471 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3parNtB5_15CanonicalErrorsNtB7_2Op4next  (in qe) + 60  [0x100fa66a4]  par.rs:206
+    +       !   471 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3opsNtB5_7ProjectNtB7_2Op4next  (in qe) + 60  [0x100fb1ce0]  ops.rs:55
+    +       !     457 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 1324  [0x100fb4ba8]  hash_agg.rs:527
+    +       !     : 457 _RNCNvMs_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB6_7HashAgg3runs_0Ba_  (in qe) + 1124  [0x100fb7c90]  hash_agg.rs:511
+    +       !     :   217 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 4344  [0x100fb913c]  mod.rs:410
+    +       !     :   | 217 _RINvMs4_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB6_8Registry14in_worker_coldNCINvNtB8_4join12join_contextNCINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB1O_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB3m_EEINtNtB1M_3map11MapConsumerINtNtNtB1M_7collect8consumer15CollectConsumerB3m_ENCNCNvMs_B3o_NtB3o_7HashAgg3runs_00EE0NCB1F_s_0INtB4J_13CollectResultB3m_EB6f_E0TB6f_B6f_EEB3s_  (in qe) + 172  [0x100ffc674]  registry.rs:524
+    +       !     :   |   217 _RNvMs3_NtCsDRs2BLQ3Lm_10rayon_core5latchNtB5_9LockLatch14wait_and_reset  (in qe) + 116  [0x100fd1794]  latch.rs:246
+    +       !     :   |     217 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +       !     :   |       217 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    +       !     :   156 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,680,...  [0x100fb82c0,0x100fb82ec,...]  mod.rs:432
+    +       !     :   33 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+    +       !     :   | 26 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 208,268,...  [0x100fba558,0x100fba594,...]  hash.rs:90
+    +       !     :   | 3 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 436,388  [0x100fba63c,0x100fba60c]  hash.rs:92
+    +       !     :   | 2 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 32,40  [0x100fba4a8,0x100fba4b0]  hash.rs:89
+    +       !     :   | 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 16  [0x100fba498]  hash.rs:88
+    +       !     :   | 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 444  [0x100fba644]  hash.rs:93
+    +       !     :   10 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+    +       !     :   | 9 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 144,44,...  [0x100fb7274,0x100fb7210,...]  hash_agg.rs:282
+    +       !     :   | 1 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 20  [0x100fb71f8]  hash_agg.rs:281
+    +       !     :   10 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 476,464,...  [0x100fb9e10,0x100fb9e04,...]  mod.rs:366
+    +       !     :   9 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+    +       !     :   | 6 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 104,32  [0x100fba0cc,0x100fba084]  hash_agg.rs:184
+    +       !     :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 4  [0x100fba068]  hash_agg.rs:183
+    +       !     :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 348  [0x100fba1c0]  hash_agg.rs:193
+    +       !     :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 424  [0x100fba20c]  hash_agg.rs:235
+    +       !     :   9 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 468,472  [0x100fb73b8,0x100fb73bc]  hash_agg.rs:285
+    +       !     :   5 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+    +       !     :   | 2 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 344  [0x100fb9d8c]  mod.rs:0
+    +       !     :   | 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 20  [0x100fb9c48]  mod.rs:351
+    +       !     :   | 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 76  [0x100fb9c80]  mod.rs:354
+    +       !     :   | 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 140  [0x100fb9cc0]  mod.rs:356
+    +       !     :   4 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 456,460,...  [0x100fba650,0x100fba654,...]  hash.rs:94
+    +       !     :   3 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 432,436,...  [0x100fba214,0x100fba218,...]  hash_agg.rs:235
+    +       !     :   1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 1484  [0x100fb8610]  mod.rs:432
+    +       !     :     1 xzm_segment_group_free_chunk  (in libsystem_malloc.dylib) + 1832  [0x19ddadb80]
+    +       !     :       1 _xzm_segment_group_segment_deallocate  (in libsystem_malloc.dylib) + 92  [0x19ddaf5e4]
+    +       !     :         1 mvm_deallocate_plat  (in libsystem_malloc.dylib) + 60  [0x19ddb71c8]
+    +       !     :           1 mach_vm_deallocate  (in libsystem_kernel.dylib) + 60  [0x19df6e7e0]
+    +       !     :             1 _kernelrpc_mach_vm_deallocate_trap  (in libsystem_kernel.dylib) + 8  [0x19df6ca94]
+    +       !     11 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 2928,2284,...  [0x100fb51ec,0x100fb4f68,...]  hash_agg.rs:527
+    +       !     2 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 3604  [0x100fb5490]  hash_agg.rs:527
+    +       !     : 2 _RINvNtCs3bJEMBXHbwl_4core3ptr9drop_glueNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableEBH_  (in qe) + 352,364  [0x100fb7110,0x100fb711c]  mod.rs:847
+    +       !     1 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 1604  [0x100fb4cc0]  hash_agg.rs:527
+    +       !       1 _RNvMsn_NtCs8Hh7wWMBHrQ_5alloc4syncINtB5_3ArcDINtNtNtCs3bJEMBXHbwl_4core3ops8function2FnTjEEp6OutputINtNtBO_6result6ResultINtNtB7_5boxed3BoxDNtNtCsegI5cLeLb9G_6engine4exec2OpEL_ENtNtB2i_5error5ErrorENtNtBO_6marker4SendNtB3c_4SyncEL_E9drop_slowB2i_  (in qe) + 56  [0x100fb2d78]  sync.rs:2149
+    +       !         1 _RINvNtCs3bJEMBXHbwl_4core3ptr9drop_glueNCNvNtNtCsegI5cLeLb9G_6engine4exec3par7chunkeds_0EBJ_  (in qe) + 44  [0x100fbdb88]  mod.rs:847
+    +       !           1 _RNvMsn_NtCs8Hh7wWMBHrQ_5alloc4syncINtB5_3ArcNtNtNtCsegI5cLeLb9G_6engine7storage3csv9CsvSourceE9drop_slowBM_  (in qe) + 52  [0x100fc1458]  sync.rs:2149
+    +       !             1 _RNvMsn_NtCs8Hh7wWMBHrQ_5alloc4syncINtB5_3ArcNtCs77ux3j61t2t_7memmap24MmapE9drop_slowCsegI5cLeLb9G_6engine  (in qe) + 120  [0x100fc13b0]  sync.rs:2149
+    +       !               1 __munmap  (in libsystem_kernel.dylib) + 8  [0x19df7072c]
+    +       121 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 3604  [0x100f8d968]  main.rs:25
+    +       ! 86 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4184  [0x100f98a98]  float.rs:84
+    +       ! : 72 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 524  [0x100f954a8]  mod.rs:2070
+    +       ! : | 61 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 112  [0x100f8fac0]  string.rs:3382
+    +       ! : | + 56 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 68  [0x100ff96d0]  mod.rs:665
+    +       ! : | + ! 34 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 40  [0x100ff9728]  mod.rs:557
+    +       ! : | + ! : 19 _realloc  (in libsystem_malloc.dylib) + 456  [0x19ddd9358]
+    +       ! : | + ! : | 14 _malloc_zone_realloc  (in libsystem_malloc.dylib) + 148  [0x19ddd8b2c]
+    +       ! : | + ! : | + 9 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 24,64,...  [0x19ddc9028,0x19ddc9050,...]
+    +       ! : | + ! : | + 2 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 896  [0x19ddc9390]
+    +       ! : | + ! : | + ! 1 _xzm_malloc  (in libsystem_malloc.dylib) + 492  [0x19ddcbfe0]
+    +       ! : | + ! : | + ! 1 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 244  [0x19ddccb40]
+    +       ! : | + ! : | + 2 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 1028  [0x19ddc9414]
+    +       ! : | + ! : | + ! 1 _xzm_free  (in libsystem_malloc.dylib) + 1384  [0x19ddd0c68]
+    +       ! : | + ! : | + ! : 1 mach_absolute_time  (in libsystem_kernel.dylib) + 108  [0x19df6d0f8]
+    +       ! : | + ! : | + ! 1 _xzm_free  (in libsystem_malloc.dylib) + 156  [0x19ddd079c]
+    +       ! : | + ! : | + 1 default_zone_realloc  (in libsystem_malloc.dylib) + 24  [0x19dd9cd10]
+    +       ! : | + ! : | 4 _malloc_zone_realloc  (in libsystem_malloc.dylib) + 88,124,...  [0x19ddd8af0,0x19ddd8b14,...]
+    +       ! : | + ! : | 1 xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib) + 1048  [0x19ddc9428]
+    +       ! : | + ! : 10 _realloc  (in libsystem_malloc.dylib) + 252  [0x19ddd928c]
+    +       ! : | + ! : | 10 xzm_malloc_zone_size  (in libsystem_malloc.dylib) + 268,48,...  [0x19ddc8410,0x19ddc8334,...]
+    +       ! : | + ! : 4 _realloc  (in libsystem_malloc.dylib) + 20,208,...  [0x19ddd91a4,0x19ddd9260,...]
+    +       ! : | + ! : 1 DYLD-STUB$$realloc  (in qe) + 4  [0x101002f94]
+    +       ! : | + ! 20 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 76  [0x100ff974c]  mod.rs:560
+    +       ! : | + ! : 13 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 296,104,...  [0x19ddccb74,0x19ddccab4,...]
+    +       ! : | + ! : 4 <deduplicated_symbol>  (in libsystem_malloc.dylib) + 192,92,...  [0x19ddd38c8,0x19ddd3864,...]
+    +       ! : | + ! : 3 _malloc_zone_malloc  (in libsystem_malloc.dylib) + 12,100  [0x19ddd84fc,0x19ddd8554]
+    +       ! : | + ! 2 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 4  [0x100ff9704]  mod.rs:544
+    +       ! : | + 4 _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe) + 120  [0x100ff9778]  mod.rs:564
+    +       ! : | + 1 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 8  [0x100ff9694]  mod.rs:658
+    +       ! : | 8 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 64  [0x100f8fa90]  string.rs:3382
+    +       ! : | + 4 DYLD-STUB$$memcpy  (in qe) + 4  [0x101002dfc]
+    +       ! : | + 4 _platform_memmove  (in libsystem_platform.dylib) + 0,428,...  [0x19dfbbd60,0x19dfbbf0c,...]
+    +       ! : | 2 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 28  [0x100f8fa6c]  string.rs:3382
+    +       ! : | 1 _RINvNvMs2_NtCs8Hh7wWMBHrQ_5alloc7raw_vecINtB8_11RawVecInnerpE7reserve21do_reserve_and_handleNtNtBa_5alloc6GlobalEBa_  (in qe) + 88  [0x100ff96e4]  mod.rs:668
+    +       ! : 5 _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe) + 84  [0x100f8faa4]  string.rs:3384
+    +       ! : 3 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 512,524  [0x100f9549c,0x100f954a8]  mod.rs:2070
+    +       ! : 2 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 44  [0x100f952c8]  mod.rs:2040
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter19pad_formatted_parts  (in qe) + 16  [0x100f95090]  mod.rs:1981
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter19pad_formatted_parts  (in qe) + 36  [0x100f950a4]  mod.rs:1982
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 160  [0x100f9533c]  mod.rs:2044
+    +       ! : 1 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 148  [0x100f95330]  result.rs:0
+    +       ! 27 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 1568,1612,...  [0x100f98060,0x100f9808c,...]  float.rs:75
+    +       ! 5 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4160  [0x100f98a80]  float.rs:75
+    +       ! : 3 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 0  [0x100f9373c]  mod.rs:177
+    +       ! : 1 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 32  [0x100f9375c]  mod.rs:0
+    +       ! : 1 _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe) + 240  [0x100f9382c]  mod.rs:244
+    +       ! 3 _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe) + 616,624  [0x100f95504,0x100f9550c]  mod.rs:2075
+    +       65 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5720  [0x100f8e1ac]  main.rs:25
+    +       ! 41 _xzm_free_main  (in libsystem_malloc.dylib) + 736  [0x19ddd519c]
+    +       ! : 41 mach_absolute_time  (in libsystem_kernel.dylib) + 108,112,...  [0x19df6d0f8,0x19df6d0fc,...]
+    +       ! 14 _xzm_free_main  (in libsystem_malloc.dylib) + 240,268,...  [0x19ddd4fac,0x19ddd4fc8,...]
+    +       ! 9 _free  (in libsystem_malloc.dylib) + 0,96,...  [0x19ddd9110,0x19ddd9170,...]
+    +       ! 1 DYLD-STUB$$free  (in qe) + 4  [0x101002da8]
+    +       15 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5688,3620,...  [0x100f8e18c,0x100f8d978,...]  main.rs:25
+    +       5 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 4528  [0x100f8dd04]  main.rs:25
+    +       ! 3 _platform_memmove  (in libsystem_platform.dylib) + 428,444  [0x19dfbbf0c,0x19dfbbf1c]
+    +       ! 2 DYLD-STUB$$memcpy  (in qe) + 4  [0x101002dfc]
+    +       4 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 2428  [0x100f8d4d0]  main.rs:25
+    +       ! 4 _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib) + 0,76,...  [0x19ddcca4c,0x19ddcca98,...]
+    +       4 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5684  [0x100f8e188]  main.rs:25
+    +       ! 3 _platform_memmove  (in libsystem_platform.dylib) + 452,428  [0x19dfbbf24,0x19dfbbf0c]
+    +       ! 1 DYLD-STUB$$memcpy  (in qe) + 4  [0x101002dfc]
+    +       2 _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe) + 4208  [0x100f98ab0]  float.rs:85
+    +       2 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 5508  [0x100f8e0d8]  main.rs:25
+    +       ! 2 _platform_memmove  (in libsystem_platform.dylib) + 0,452  [0x19dfbbd60,0x19dfbbf24]
+    +       1 _RNvCsgJ4wYTXidDx_2qe4main  (in qe) + 6000  [0x100f8e2c4]  main.rs:25
+    +         1 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3parNtB5_15CanonicalErrorsNtB7_2Op4next  (in qe) + 60  [0x100fa66a4]  par.rs:206
+    +           1 _RNvXs1_NtNtCsegI5cLeLb9G_6engine4exec3opsNtB5_7ProjectNtB7_2Op4next  (in qe) + 60  [0x100fb1ce0]  ops.rs:55
+    +             1 _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe) + 548  [0x100fb48a0]  hash_agg.rs:534
+    +               1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column4take  (in qe) + 824  [0x100fa8f30]  mod.rs:202
+    690 Thread_10318926
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           560 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +           ! 560 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +           !   560 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    +           130 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+    +             130 _RNvXs2_NtCsDRs2BLQ3Lm_10rayon_core3jobINtB5_8StackJobNtNtB7_5latch9SpinLatchNCINvNvNtB7_4join12join_context6call_bINtNtNtNtCscKDrFfDt2Di_5rayon4iter7collect8consumer13CollectResultNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableENCINvNvNtB1V_8plumbing24bridge_producer_consumer6helperINtNtB1X_3vec13DrainProducerTB2S_B2S_EEINtNtB1V_3map11MapConsumerINtB1R_15CollectConsumerB2S_ENCNCNvMs_B2U_NtB2U_7HashAgg3runs_00EEs_0E0B1O_ENtB5_3Job7executeB2Y_  (in qe) + 136  [0x100fb9980]  job.rs:120
+    +               95 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,664,...  [0x100fb82c0,0x100fb82dc,...]  mod.rs:432
+    +               12 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+    +               : 9 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 104,28  [0x100fba0cc,0x100fba080]  hash_agg.rs:184
+    +               : 3 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 292  [0x100fba188]  hash_agg.rs:191
+    +               7 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+    +               : 6 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 144,360,...  [0x100fb7274,0x100fb734c,...]  hash_agg.rs:282
+    +               : 1 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 20  [0x100fb71f8]  hash_agg.rs:281
+    +               6 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 476  [0x100fb9e10]  mod.rs:366
+    +               3 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+    +               : 2 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 344,372  [0x100fb9d8c,0x100fb9da8]  mod.rs:0
+    +               : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 20  [0x100fb9c48]  mod.rs:351
+    +               3 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 472  [0x100fb73bc]  hash_agg.rs:285
+    +               1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+    +               : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 20  [0x100fba49c]  hash.rs:88
+    +               1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 1520  [0x100fb8634]  mod.rs:432
+    +               : 1 xzm_segment_group_free_chunk  (in libsystem_malloc.dylib) + 1832  [0x19ddadb80]
+    +               :   1 _xzm_segment_group_segment_deallocate  (in libsystem_malloc.dylib) + 92  [0x19ddaf5e4]
+    +               :     1 mvm_deallocate_plat  (in libsystem_malloc.dylib) + 60  [0x19ddb71c8]
+    +               :       1 mach_vm_deallocate  (in libsystem_kernel.dylib) + 60  [0x19df6e7e0]
+    +               :         1 _kernelrpc_mach_vm_deallocate_trap  (in libsystem_kernel.dylib) + 8  [0x19df6ca94]
+    +               1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 472  [0x100fba660]  hash.rs:94
+    +               1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 440  [0x100fba21c]  hash_agg.rs:235
+    690 Thread_10318927
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           641 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +           ! 641 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +           !   641 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    +           49 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+    +             49 _RNvXs2_NtCsDRs2BLQ3Lm_10rayon_core3jobINtB5_8StackJobNtNtB7_5latch9SpinLatchNCINvNvNtB7_4join12join_context6call_bINtNtNtNtCscKDrFfDt2Di_5rayon4iter7collect8consumer13CollectResultNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableENCINvNvNtB1V_8plumbing24bridge_producer_consumer6helperINtNtB1X_3vec13DrainProducerTB2S_B2S_EEINtNtB1V_3map11MapConsumerINtB1R_15CollectConsumerB2S_ENCNCNvMs_B2U_NtB2U_7HashAgg3runs_00EEs_0E0B1O_ENtB5_3Job7executeB2Y_  (in qe) + 136  [0x100fb9980]  job.rs:120
+    +               45 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,680,...  [0x100fb82c0,0x100fb82ec,...]  mod.rs:432
+    +               2 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+    +               : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 32  [0x100fba4a8]  hash.rs:89
+    +               : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 388  [0x100fba60c]  hash.rs:92
+    +               1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+    +               : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 368  [0x100fb9da4]  mod.rs:0
+    +               1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 1520  [0x100fb8634]  mod.rs:432
+    +                 1 xzm_segment_group_free_chunk  (in libsystem_malloc.dylib) + 1832  [0x19ddadb80]
+    +                   1 _xzm_segment_group_segment_deallocate  (in libsystem_malloc.dylib) + 92  [0x19ddaf5e4]
+    +                     1 mvm_deallocate_plat  (in libsystem_malloc.dylib) + 60  [0x19ddb71c8]
+    +                       1 mach_vm_deallocate  (in libsystem_kernel.dylib) + 60  [0x19df6e7e0]
+    +                         1 _kernelrpc_mach_vm_deallocate_trap  (in libsystem_kernel.dylib) + 8  [0x19df6ca94]
+    690 Thread_10318928
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           613 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +           ! 613 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +           !   613 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    +           77 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+    +             77 _RNvXs2_NtCsDRs2BLQ3Lm_10rayon_core3jobINtB5_8StackJobNtNtB7_5latch9SpinLatchNCINvNvNtB7_4join12join_context6call_bINtNtNtNtCscKDrFfDt2Di_5rayon4iter7collect8consumer13CollectResultNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableENCINvNvNtB1V_8plumbing24bridge_producer_consumer6helperINtNtB1X_3vec13DrainProducerTB2S_B2S_EEINtNtB1V_3map11MapConsumerINtB1R_15CollectConsumerB2S_ENCNCNvMs_B2U_NtB2U_7HashAgg3runs_00EEs_0E0B1O_ENtB5_3Job7executeB2Y_  (in qe) + 136  [0x100fb9980]  job.rs:120
+    +               45 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,844,...  [0x100fb82c0,0x100fb8390,...]  mod.rs:432
+    +               22 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+    +               : 18 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 260,224,...  [0x100fba58c,0x100fba568,...]  hash.rs:90
+    +               : 2 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 16,20  [0x100fba498,0x100fba49c]  hash.rs:88
+    +               : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 32  [0x100fba4a8]  hash.rs:89
+    +               : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 128  [0x100fba508]  hash.rs:90
+    +               :   1 _xzm_malloc_large_huge  (in libsystem_malloc.dylib) + 968  [0x19ddcc4ac]
+    +               :     1 xzm_segment_group_alloc_chunk  (in libsystem_malloc.dylib) + 1492  [0x19ddacccc]
+    +               :       1 __bzero  (in libsystem_platform.dylib) + 64  [0x19dfbba70]
+    +               5 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+    +               : 3 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 104  [0x100fba0cc]  hash_agg.rs:184
+    +               : 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 288  [0x100fba184]  hash_agg.rs:190
+    +               : 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 340  [0x100fba1b8]  hash_agg.rs:193
+    +               3 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+    +               : 3 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 144,180,...  [0x100fb7274,0x100fb7298,...]  hash_agg.rs:282
+    +               2 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+    +                 2 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 76,96  [0x100fb9c80,0x100fb9c94]  mod.rs:354
+    690 Thread_10318929
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           612 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +           ! 612 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +           !   612 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    +           78 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+    +             78 _RNvXs2_NtCsDRs2BLQ3Lm_10rayon_core3jobINtB5_8StackJobNtNtB7_5latch9SpinLatchNCINvNvNtB7_4join12join_context6call_bINtNtNtNtCscKDrFfDt2Di_5rayon4iter7collect8consumer13CollectResultNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableENCINvNvNtB1V_8plumbing24bridge_producer_consumer6helperINtNtB1X_3vec13DrainProducerTB2S_B2S_EEINtNtB1V_3map11MapConsumerINtB1R_15CollectConsumerB2S_ENCNCNvMs_B2U_NtB2U_7HashAgg3runs_00EEs_0E0B1O_ENtB5_3Job7executeB2Y_  (in qe) + 136  [0x100fb9980]  job.rs:120
+    +               78 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 4036  [0x100fb9008]  mod.rs:410
+    +                 78 _RNCINvNtCsDRs2BLQ3Lm_10rayon_core4join12join_contextNCINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtBZ_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB2w_EEINtNtBX_3map11MapConsumerINtNtNtBX_7collect8consumer15CollectConsumerB2w_ENCNCNvMs_B2y_NtB2y_7HashAgg3runs_00EE0NCBQ_s_0INtB3S_13CollectResultB2w_EB5m_E0B2C_  (in qe) + 292  [0x100fb92f8]  mod.rs:142
+    +                   44 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,680,...  [0x100fb82c0,0x100fb82ec,...]  mod.rs:432
+    +                   20 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+    +                   : 18 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 208,224,...  [0x100fba558,0x100fba568,...]  hash.rs:90
+    +                   : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 40  [0x100fba4b0]  hash.rs:89
+    +                   : 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 128  [0x100fba508]  hash.rs:90
+    +                   :   1 _xzm_malloc_large_huge  (in libsystem_malloc.dylib) + 968  [0x19ddcc4ac]
+    +                   :     1 xzm_segment_group_alloc_chunk  (in libsystem_malloc.dylib) + 1492  [0x19ddacccc]
+    +                   :       1 __bzero  (in libsystem_platform.dylib) + 64  [0x19dfbba70]
+    +                   4 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+    +                   : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 344  [0x100fb9d8c]  mod.rs:0
+    +                   : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 132  [0x100fb9cb8]  mod.rs:354
+    +                   : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 140  [0x100fb9cc0]  mod.rs:356
+    +                   : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 380  [0x100fb9db0]  mod.rs:363
+    +                   4 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+    +                   : 2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 28  [0x100fba080]  hash_agg.rs:184
+    +                   : 2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 340,348  [0x100fba1b8,0x100fba1c0]  hash_agg.rs:193
+    +                   2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 432,440  [0x100fba214,0x100fba21c]  hash_agg.rs:235
+    +                   1 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+    +                   : 1 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 144  [0x100fb7274]  hash_agg.rs:282
+    +                   1 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 472  [0x100fb73bc]  hash_agg.rs:285
+    +                   1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 464  [0x100fb9e04]  mod.rs:366
+    +                   1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 472  [0x100fba660]  hash.rs:94
+    690 Thread_10318930
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318931
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318932
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318933
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318934
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318935
+    + 690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+    +   690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+    +     690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+    +       690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+    +         690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+    +           690 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+    +             690 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+    +               690 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+    690 Thread_10318936
+      690 thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+        690 _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+          690 _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+            690 _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+              690 _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+                473 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+                ! 473 _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+                !   473 __psynch_cvwait  (in libsystem_kernel.dylib) + 8  [0x19df7050c]
+                217 _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+                  217 _RNvXs2_NtCsDRs2BLQ3Lm_10rayon_core3jobINtB5_8StackJobINtNtB7_5latch8LatchRefNtBS_9LockLatchENCNCINvMs4_NtB7_8registryNtB1D_8Registry14in_worker_coldNCINvNtB7_4join12join_contextNCINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB30_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB4y_EEINtNtB2Y_3map11MapConsumerINtNtNtB2Y_7collect8consumer15CollectConsumerB4y_ENCNCNvMs_B4A_NtB4A_7HashAgg3runs_00EE0NCB2R_s_0INtB5V_13CollectResultB4y_EB7r_E0TB7r_B7r_EE00B7Y_ENtB5_3Job7executeB4E_  (in qe) + 164  [0x100fb980c]  job.rs:120
+                    217 _RNCINvNtCsDRs2BLQ3Lm_10rayon_core4join12join_contextNCINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtBZ_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB2w_EEINtNtBX_3map11MapConsumerINtNtNtBX_7collect8consumer15CollectConsumerB2w_ENCNCNvMs_B2y_NtB2y_7HashAgg3runs_00EE0NCBQ_s_0INtB3S_13CollectResultB2w_EB5m_E0B2C_  (in qe) + 292  [0x100fb92f8]  mod.rs:142
+                      107 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,664,...  [0x100fb82c0,0x100fb82dc,...]  mod.rs:432
+                      79 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 4036  [0x100fb9008]  mod.rs:410
+                      : 79 _RNCINvNtCsDRs2BLQ3Lm_10rayon_core4join12join_contextNCINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtBZ_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB2w_EEINtNtBX_3map11MapConsumerINtNtNtBX_7collect8consumer15CollectConsumerB2w_ENCNCNvMs_B2y_NtB2y_7HashAgg3runs_00EE0NCBQ_s_0INtB3S_13CollectResultB2w_EB5m_E0B2C_  (in qe) + 292  [0x100fb92f8]  mod.rs:142
+                      :   45 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 636,680,...  [0x100fb82c0,0x100fb82ec,...]  mod.rs:432
+                      :   21 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+                      :   | 18 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 268,208,...  [0x100fba594,0x100fba558,...]  hash.rs:90
+                      :   | 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 20  [0x100fba49c]  hash.rs:88
+                      :   | 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 128  [0x100fba508]  hash.rs:90
+                      :   | + 1 _xzm_malloc_large_huge  (in libsystem_malloc.dylib) + 968  [0x19ddcc4ac]
+                      :   | +   1 xzm_segment_group_alloc_chunk  (in libsystem_malloc.dylib) + 1492  [0x19ddacccc]
+                      :   | +     1 __bzero  (in libsystem_platform.dylib) + 64  [0x19dfbba70]
+                      :   | 1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 352  [0x100fba5e8]  hash.rs:92
+                      :   10 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+                      :   | 7 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 104,28,...  [0x100fba0cc,0x100fba080,...]  hash_agg.rs:184
+                      :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 12  [0x100fba070]  hash_agg.rs:183
+                      :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 288  [0x100fba184]  hash_agg.rs:190
+                      :   | 1 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 292  [0x100fba188]  hash_agg.rs:191
+                      :   2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 432,440  [0x100fba214,0x100fba21c]  hash_agg.rs:235
+                      :   1 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 460  [0x100fba654]  hash.rs:94
+                      8 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+                      : 6 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 104,28  [0x100fba0cc,0x100fba080]  hash_agg.rs:184
+                      : 2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 288  [0x100fba184]  hash_agg.rs:190
+                      7 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+                      : 7 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 144,44,...  [0x100fb7274,0x100fb7210,...]  hash_agg.rs:282
+                      6 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 476,472  [0x100fb9e10,0x100fb9e0c]  mod.rs:366
+                      3 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+                      : 2 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 344,368  [0x100fb9d8c,0x100fb9da4]  mod.rs:0
+                      : 1 _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 112  [0x100fb9ca4]  mod.rs:354
+                      3 _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 472,460  [0x100fb73bc,0x100fb73b0]  hash_agg.rs:285
+                      2 _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+                      : 2 _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 40  [0x100fba4b0]  hash.rs:89
+                      2 _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 440  [0x100fba21c]  hash_agg.rs:235
+
+Total number in stack (recursive counted multiple, when >=5):
+        12       __psynch_cvwait  (in libsystem_kernel.dylib) + 0  [0x19df70504]
+        12       _pthread_cond_wait  (in libsystem_pthread.dylib) + 980  [0x19dfb21d0]
+        11       _RINvNtNtCsdnanKjkF2cC_3std3sys9backtrace28___rust_begin_short_backtraceNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1f_12DefaultSpawnNtB1f_11ThreadSpawn5spawn0uEB1h_  (in qe) + 524  [0x100fce5c0]  backtrace.rs:166
+        11       _RNSNvYNCINvNtNtCsdnanKjkF2cC_3std6thread9lifecycle15spawn_uncheckedNCNvXs0_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB1b_12DefaultSpawnNtB1b_11ThreadSpawn5spawn0uEs_0INtNtNtCs3bJEMBXHbwl_4core3ops8function6FnOnceuE9call_once6vtableB1d_  (in qe) + 92  [0x100fd1338]  function.rs:250
+        11       _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 1536  [0x100ffda70]  registry.rs:806
+        11       _RNvNvMs0_NtNtNtCsdnanKjkF2cC_3std3sys6thread4unixNtB7_6Thread3new12thread_start  (in qe) + 380  [0x100ff5004]  unix.rs:123
+        11       _pthread_start  (in libsystem_pthread.dylib) + 136  [0x19dfb1d00]
+        11       thread_start  (in libsystem_pthread.dylib) + 8  [0x19dfaccec]
+        7       _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 0  [0x100fb8044]  mod.rs:432
+        7       _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 736  [0x100fb8324]  mod.rs:432
+        6       _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 844  [0x100fb8390]  mod.rs:432
+        6       _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 960  [0x100fb8404]  mod.rs:432
+        6       _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 0  [0x100fba064]  hash_agg.rs:184
+        6       _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe) + 0  [0x100fba064]  hash_agg.rs:235
+        5       _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe) + 712  [0x100fb830c]  mod.rs:432
+        5       _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe) + 0  [0x100fb71e4]  hash_agg.rs:282
+        5       _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe) + 0  [0x100fb9c34]  mod.rs:0
+        5       _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe) + 0  [0x100fba488]  hash.rs:89
+        5       _RNvMs8_NtCsDRs2BLQ3Lm_10rayon_core8registryNtB5_12WorkerThread15wait_until_cold  (in qe) + 2076  [0x100ffdc8c]  registry.rs:800
+
+Sort by top of stack, same collapsed (when >= 5):
+        __psynch_cvwait  (in libsystem_kernel.dylib)        7256
+        _RINvNvNtNtCscKDrFfDt2Di_5rayon4iter8plumbing24bridge_producer_consumer6helperINtNtB8_3vec13DrainProducerTNtNtNtCsegI5cLeLb9G_6engine4exec8hash_agg8AggTableB1F_EEINtNtB6_3map11MapConsumerINtNtNtB6_7collect8consumer15CollectConsumerB1F_ENCNCNvMs_B1H_NtB1H_7HashAgg3runs_00EEB1L_  (in qe)        537
+        _RNvMs1_NtNtCsegI5cLeLb9G_6engine4exec4hashNtB5_6IntMap6insert  (in qe)        105
+        _RNvNtNtCsegI5cLeLb9G_6engine4exec8hash_agg11merge_state  (in qe)        58
+        _RNvMNtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB2_8AggTable9new_group  (in qe)        44
+        mach_absolute_time  (in libsystem_kernel.dylib)        42
+        _RNvMs1_NtCsegI5cLeLb9G_6engine5typesNtB5_6Column9push_from  (in qe)        41
+        _RINvNtNtCs3bJEMBXHbwl_4core3fmt5float32float_to_decimal_common_shortestdEB6_  (in qe)        29
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        18
+        _RNvCsgJ4wYTXidDx_2qe4main  (in qe)        15
+        _xzm_free_main  (in libsystem_malloc.dylib)        14
+        _platform_memmove  (in libsystem_platform.dylib)        12
+        _RNvXs0_NtNtCsegI5cLeLb9G_6engine4exec8hash_aggNtB5_7HashAggNtB7_2Op4next  (in qe)        11
+        _RNvMsa_NtCs3bJEMBXHbwl_4core3fmtNtB5_9Formatter21write_formatted_parts  (in qe)        10
+        xzm_malloc_zone_malloc_type_realloc  (in libsystem_malloc.dylib)        10
+        xzm_malloc_zone_size  (in libsystem_malloc.dylib)        10
+        _free  (in libsystem_malloc.dylib)        9
+        DYLD-STUB$$memcpy  (in qe)        7
+        _RNvXsZ_NtCs8Hh7wWMBHrQ_5alloc6stringNtB5_6StringNtNtCs3bJEMBXHbwl_4core3fmt5Write9write_str  (in qe)        7
+        _RNvMs5_NtCs8Hh7wWMBHrQ_5alloc7raw_vecNtB5_11RawVecInner11finish_growB7_  (in qe)        6
+        _RNvNtNtNtCs3bJEMBXHbwl_4core3num3imp7flt2dec17digits_to_dec_str  (in qe)        5
+
+Binary Images:
+       0x100f8c000 -        0x101015fd7 +qe (0) <875B9D60-62D3-3B01-B1A9-239892734BEC> /Users/*/Desktop/*/qe
+       0x19db28000 -        0x19db775f7  libobjc.A.dylib (973.1) <C0680DF6-9900-3C29-A071-95A031686EF8> /usr/lib/libobjc.A.dylib
+       0x19db78000 -        0x19db8223f  libsharedcache.dylib (0) <BBF95357-BEBF-3D89-8900-2BBB14A667C5> /usr/lib/libsharedcache.dylib
+       0x19db83000 -        0x19dba9d3b  libdyld.dylib (27062) <62863BCA-DD60-3D32-A9DB-89099BA6F3D7> /usr/lib/system/libdyld.dylib
+       0x19dbaa000 -        0x19dc696e3  dyld (1.0.0 - 27062) <D341DDCB-7969-3A9C-8E03-0CF4751398A9> /usr/lib/dyld
+       0x19dc6a000 -        0x19dc6d01f  libsystem_blocks.dylib (98.1) <6F304731-D95D-3501-B4AD-F2934F7F2446> /usr/lib/system/libsystem_blocks.dylib
+       0x19dc6e000 -        0x19dcc30df  libxpc.dylib (3298.1.1) <0791121F-B5FC-3F84-BF04-115E86D2D882> /usr/lib/system/libxpc.dylib
+       0x19dcc4000 -        0x19dce3c13  libsystem_trace.dylib (1966.1.1) <B48A8E3E-A12A-3342-8321-428B555E965E> /usr/lib/system/libsystem_trace.dylib
+       0x19dce4000 -        0x19dd98f27  libcorecrypto.dylib (2109.0.22) <807AA6C9-5D8A-3CA5-B4CE-FACE5296EF6A> /usr/lib/system/libcorecrypto.dylib
+       0x19dd99000 -        0x19ddeec5f  libsystem_malloc.dylib (886.0.8) <2339CB57-FE5A-3154-A206-A76059C749EB> /usr/lib/system/libsystem_malloc.dylib
+       0x19ddef000 -        0x19de3519f  libdispatch.dylib (1605.0.2) <022BF08F-0B3A-3225-9E65-16D1553CE90D> /usr/lib/system/libdispatch.dylib
+       0x19de36000 -        0x19de38d2b  libsystem_featureflags.dylib (108) <20C1CAB2-1F13-3426-8146-9CAE9FF2A33D> /usr/lib/system/libsystem_featureflags.dylib
+       0x19de39000 -        0x19debbca3  libsystem_c.dylib (1786.0.3) <FBA7B23E-AA60-3A90-9AA4-A7A2E0AD63EE> /usr/lib/system/libsystem_c.dylib
+       0x19debc000 -        0x19df51033  libc++.1.dylib (2200.27) <1E9BA4AA-B5DA-3CF3-80AC-4B880049573F> /usr/lib/libc++.1.dylib
+       0x19df52000 -        0x19df6beff  libc++abi.dylib (2200.27) <A21743EE-6E1C-3E74-97EA-7AF793DE4BDF> /usr/lib/libc++abi.dylib
+       0x19df6c000 -        0x19dfaa9ab  libsystem_kernel.dylib (13432.1.9) <F63BF418-8F75-34A4-AAF1-8CAF2B9B6A05> /usr/lib/system/libsystem_kernel.dylib
+       0x19dfab000 -        0x19dfb791b  libsystem_pthread.dylib (553.0.1) <5A1828C3-CBC2-3B85-BD07-C8ED10021A41> /usr/lib/system/libsystem_pthread.dylib
+       0x19dfb8000 -        0x19dfc14f3  libsystem_platform.dylib (402.0.1.0.1) <080E4444-A0FB-3913-9756-4E470015F32F> /usr/lib/system/libsystem_platform.dylib
+       0x19dfc2000 -        0x19dff0903  libsystem_info.dylib (603) <BC387AEB-1CEF-3513-92D7-D7F913596711> /usr/lib/system/libsystem_info.dylib
+       0x1a211a000 -        0x1a2123b13  libsystem_darwin.dylib (1786.0.3) <4E66C888-993C-3E6A-A8DA-A949C01C5B67> /usr/lib/system/libsystem_darwin.dylib
+       0x1a2574000 -        0x1a2585b8b  libsystem_notify.dylib (368) <58FD36D8-37A7-311C-80F2-8E64DD8710CF> /usr/lib/system/libsystem_notify.dylib
+       0x1a46d1000 -        0x1a46ebd93  libsystem_networkextension.dylib (2340.1.2) <22E1D190-486F-324F-ABA4-F36AB841BFE9> /usr/lib/system/libsystem_networkextension.dylib
+       0x1a4779000 -        0x1a4790247  libsystem_asl.dylib (409) <B4D449B7-A821-3A9A-8019-E917B291F10A> /usr/lib/system/libsystem_asl.dylib
+       0x1a5724000 -        0x1a5724f2f  libobjcMsgSend.dylib (973.1) <41179EDE-DC97-3BBE-8848-6400D12C1436> /usr/lib/objc/libobjcMsgSend.dylib
+       0x1a6870000 -        0x1a6877edf  libsystem_symptoms.dylib (2394.0.4) <60EE7884-9F4E-3184-A6AC-FA40A7A0297D> /usr/lib/system/libsystem_symptoms.dylib
+       0x1aac08000 -        0x1aac42aeb  libsystem_containermanager.dylib (833.0.8.0.1) <08A57205-555D-3792-8931-9D5B585AF326> /usr/lib/system/libsystem_containermanager.dylib
+       0x1ac25b000 -        0x1ac25f317  libsystem_configuration.dylib (1446) <F3EB66A7-7A24-3AE5-B6E8-9A37BB00F119> /usr/lib/system/libsystem_configuration.dylib
+       0x1ac260000 -        0x1ac266e03  libsystem_sandbox.dylib (3051.0.52) <1E892B56-092E-3832-BDE3-DCE356D7A4FA> /usr/lib/system/libsystem_sandbox.dylib
+       0x1ad724000 -        0x1ad724f2f  libobjcMsgSend1.dylib (973.1) <B40D9B2A-E1EE-37ED-8004-711A1F263DE1> /usr/lib/objc/libobjcMsgSend1.dylib
+       0x1ade44000 -        0x1ade46f93  libquarantine.dylib (217.0.4) <7FD4AE22-86EF-382B-83F5-ADF9336C1160> /usr/lib/system/libquarantine.dylib
+       0x1ae556000 -        0x1ae55c1e7  libsystem_coreservices.dylib (203) <57248E07-11A5-3857-918E-4A3A63B69FE8> /usr/lib/system/libsystem_coreservices.dylib
+       0x1aeb1e000 -        0x1aeb5bb27  libsystem_m.dylib (3326.0.1) <A3FB340F-3ED5-30F4-8B64-9D5860F64D35> /usr/lib/system/libsystem_m.dylib
+       0x1aeb5c000 -        0x1aeb5cb47  libcharset.1.dylib (121) <3C9B584E-740A-3664-A1B0-52E561EA4B0B> /usr/lib/libcharset.1.dylib
+       0x1aeb5d000 -        0x1aeb604f7  libmacho.dylib (27062) <50DEADEC-3E99-3519-AFC3-4A3FEB3F14C3> /usr/lib/system/libmacho.dylib
+       0x1aeb7a000 -        0x1aeb86707  libcommonCrypto.dylib (600041) <41C99F45-C5E6-39DB-B1F2-A1BEA9D242A4> /usr/lib/system/libcommonCrypto.dylib
+       0x1aeb87000 -        0x1aeb90c87  libunwind.dylib (2200.5) <3070AB81-B082-39E8-8A00-EF88DDE9AC47> /usr/lib/system/libunwind.dylib
+       0x1aeb98000 -        0x1aeba27eb  libcopyfile.dylib (260.0.3) <72D95AF9-BF5E-3A84-81A6-BCC5BDB99857> /usr/lib/system/libcopyfile.dylib
+       0x1aeba3000 -        0x1aeba68bf  libcompiler_rt.dylib (103.4) <DFB5CE7F-A36E-36AA-BECE-1392D3D43607> /usr/lib/system/libcompiler_rt.dylib
+       0x1aeba7000 -        0x1aebac077  libsystem_collections.dylib (1786.0.3) <1E8022D4-5A37-3A7A-8936-603E6FA88358> /usr/lib/system/libsystem_collections.dylib
+       0x1aebad000 -        0x1aebaff1f  libsystem_secinit.dylib (182) <DE037464-4C5D-3E96-A33F-2A4557CC6A20> /usr/lib/system/libsystem_secinit.dylib
+       0x1aebb0000 -        0x1aebb297f  libremovefile.dylib (96) <E6E6DFCF-6B2C-3F30-A59D-816CAB1190CE> /usr/lib/system/libremovefile.dylib
+       0x1aebb3000 -        0x1aebb3e27  libkeymgr.dylib (31) <5EC997EF-3ADA-360B-9FCD-5F940C83FA4E> /usr/lib/system/libkeymgr.dylib
+       0x1aebb4000 -        0x1aebbcaf7  libsystem_dnssd.dylib (3111.0.5.0.1) <DE22096F-1E5B-3D6E-8164-771582DD6391> /usr/lib/system/libsystem_dnssd.dylib
+       0x1aebbd000 -        0x1aebc1f1b  libcache.dylib (95) <80BAE197-E285-3F6E-A1EE-B77FE37D7E5D> /usr/lib/system/libcache.dylib
+       0x1aebc2000 -        0x1aebc38f3  libSystem.B.dylib (1359) <4FDC9AA6-B344-37FE-B8C6-A4C94A038F57> /usr/lib/libSystem.B.dylib
+       0x1aebfc000 -        0x1aec030a3  libiconv.2.dylib (121) <C343D6F7-6932-30E8-8E8F-F756946D8413> /usr/lib/libiconv.2.dylib
+       0x1b5724000 -        0x1b5724f2f  libobjcMsgSend2.dylib (973.1) <BD27A84B-C9AE-3282-BBEA-3B6119837B5A> /usr/lib/objc/libobjcMsgSend2.dylib
+       0x1bd724000 -        0x1bd724f2f  libobjcMsgSend3.dylib (973.1) <C0860D68-DDFC-3BD7-8B06-DB0645CBBED4> /usr/lib/objc/libobjcMsgSend3.dylib
+       0x1c5724000 -        0x1c5724f2f  libobjcMsgSend4.dylib (973.1) <A6153BF5-622B-3B01-81B6-F64A365EF613> /usr/lib/objc/libobjcMsgSend4.dylib
+       0x1cd724000 -        0x1cd724f2f  libobjcMsgSend5.dylib (973.1) <3913A71C-B29A-3AEA-820B-BEC40AC1861A> /usr/lib/objc/libobjcMsgSend5.dylib
+       0x1d5724000 -        0x1d5724f2f  libobjcMsgSend6.dylib (973.1) <9BC523A3-E167-3F6C-8CAE-0F3EBA671791> /usr/lib/objc/libobjcMsgSend6.dylib
+       0x1dd724000 -        0x1dd724f2f  libobjcMsgSend7.dylib (973.1) <248B7BCE-5B4C-34C7-A340-43D5228628C5> /usr/lib/objc/libobjcMsgSend7.dylib
+       0x1e5724000 -        0x1e5724f2f  libobjcMsgSend8.dylib (973.1) <3E041BAD-A8E8-3069-B741-78CD1A45B176> /usr/lib/objc/libobjcMsgSend8.dylib
+       0x1ed724000 -        0x1ed724f2f  libobjcMsgSend9.dylib (973.1) <34A67969-21A0-39D6-BB81-8FDA5A2409DB> /usr/lib/objc/libobjcMsgSend9.dylib
+       0x1f5724000 -        0x1f5724f2f  libobjcMsgSend10.dylib (973.1) <678186C0-8EAD-3B35-8CBB-00285B41E4A0> /usr/lib/objc/libobjcMsgSend10.dylib
+       0x1fd724000 -        0x1fd724f2f  libobjcMsgSend11.dylib (973.1) <E05CB08C-E956-36FA-8967-AE8E346A8D2C> /usr/lib/objc/libobjcMsgSend11.dylib
+       0x225724000 -        0x225724f2f  libobjcMsgSend12.dylib (973.1) <10AB03AA-FF1F-3FDC-9DFB-BFC40042C501> /usr/lib/objc/libobjcMsgSend12.dylib
+       0x22d724000 -        0x22d724f2f  libobjcMsgSend13.dylib (973.1) <ABF53427-FA6F-3D0D-8F9D-7AD795CA5C92> /usr/lib/objc/libobjcMsgSend13.dylib
+       0x235724000 -        0x235724f2f  libobjcMsgSend14.dylib (973.1) <9A844C46-A6DA-34D4-8EBF-2AD775C30684> /usr/lib/objc/libobjcMsgSend14.dylib
+       0x23d724000 -        0x23d724f2f  libobjcMsgSend15.dylib (973.1) <7C995666-2B2D-3284-AA0A-EBF7C922838E> /usr/lib/objc/libobjcMsgSend15.dylib
+       0x245724000 -        0x245724f2f  libobjcMsgSend16.dylib (973.1) <B6C0E14B-53AE-3E22-9ED5-1729C49F46F2> /usr/lib/objc/libobjcMsgSend16.dylib
+       0x24d724000 -        0x24d724f2f  libobjcMsgSend17.dylib (973.1) <07B4CF85-251B-301B-832B-20B315A59E19> /usr/lib/objc/libobjcMsgSend17.dylib
+       0x255724000 -        0x255724f2f  libobjcMsgSend18.dylib (973.1) <43E575B7-04DB-3999-A633-1A3B638BA6E3> /usr/lib/objc/libobjcMsgSend18.dylib
+       0x25d724000 -        0x25d724f2f  libobjcMsgSend19.dylib (973.1) <736F4D85-76F7-3B28-8D87-C07E8F7A0EF4> /usr/lib/objc/libobjcMsgSend19.dylib
+       0x265724000 -        0x265724f2f  libobjcMsgSend20.dylib (973.1) <74E67C8B-6BCA-3184-A18E-A97F370052C6> /usr/lib/objc/libobjcMsgSend20.dylib
+       0x26d724000 -        0x26d724f2f  libobjcMsgSend21.dylib (973.1) <CC0D732F-98E7-3888-9E15-70984DA2FB04> /usr/lib/objc/libobjcMsgSend21.dylib
+       0x275724000 -        0x275724f2f  libobjcMsgSend22.dylib (973.1) <85A60286-5DE3-32BA-B18C-2A498B065C88> /usr/lib/objc/libobjcMsgSend22.dylib
+       0x27d724000 -        0x27d724f2f  libobjcMsgSend23.dylib (973.1) <5452A0D2-6B19-39BE-ADDD-80B7BCDE3A98> /usr/lib/objc/libobjcMsgSend23.dylib
+       0x285724000 -        0x285724f2f  libobjcMsgSend24.dylib (973.1) <94BBF2D6-722B-350D-8557-4D25A8E8D53A> /usr/lib/objc/libobjcMsgSend24.dylib
+       0x28d724000 -        0x28d724f2f  libobjcMsgSend25.dylib (973.1) <35481387-5A8E-3AE4-86A6-94CEB3CC8726> /usr/lib/objc/libobjcMsgSend25.dylib
+       0x2a5724000 -        0x2a5724f2f  libobjcMsgSend26.dylib (973.1) <9E0C8664-E7F4-39D1-AAFC-BD92B255E4E8> /usr/lib/objc/libobjcMsgSend26.dylib
+       0x2ad724000 -        0x2ad724f2f  libobjcMsgSend27.dylib (973.1) <FD424935-55A9-3650-955A-EED3441A1D19> /usr/lib/objc/libobjcMsgSend27.dylib
+       0x2b5724000 -        0x2b5724f2f  libobjcMsgSend28.dylib (973.1) <09BA7B97-7DF7-3C7F-932A-B6847662FC49> /usr/lib/objc/libobjcMsgSend28.dylib
+       0x2bd724000 -        0x2bd724f2f  libobjcMsgSend29.dylib (973.1) <36D5BA3F-2139-30B0-8558-556764BE9813> /usr/lib/objc/libobjcMsgSend29.dylib
+       0x2c5724000 -        0x2c5724f2f  libobjcMsgSend30.dylib (973.1) <9F05564A-9D12-372C-98FC-E9F0E6BE4F04> /usr/lib/objc/libobjcMsgSend30.dylib
+       0x2ca43e000 -        0x2ca444fe5  libRosetta.dylib (385) <E359944B-D230-33F9-A04E-0C3B17C3326E> /usr/lib/libRosetta.dylib
+       0x2cae2d000 -        0x2cae3075b  libsystem_darwindirectory.dylib (129.0.1) <61264923-2AA5-3658-B8C4-550C71E9D4B3> /usr/lib/system/libsystem_darwindirectory.dylib
+       0x2cae31000 -        0x2cae3bd9b  libsystem_eligibility.dylib (446.1.3) <EDDE8E9C-A2CF-3931-BBB3-321CB852EB30> /usr/lib/system/libsystem_eligibility.dylib
+       0x2cae3c000 -        0x2cae4542b  libsystem_sanitizers.dylib (32) <7138ED99-7AA0-34EA-B35B-20EF6ADB1EED> /usr/lib/system/libsystem_sanitizers.dylib
+       0x2cae46000 -        0x2cae46a13  libsystem_trial.dylib (511) <6AE48824-EC44-3A8C-B501-BE57DBE892E7> /usr/lib/system/libsystem_trial.dylib
+       0x2cd724000 -        0x2cd724f2f  libobjcMsgSend31.dylib (973.1) <0985E20F-78C3-3466-A2B2-DBB95F7104A3> /usr/lib/objc/libobjcMsgSend31.dylib
+       0x2d5724000 -        0x2d5724f2f  libobjcMsgSend32.dylib (973.1) <0D309D58-D576-3E5D-AD4B-6D55AB491702> /usr/lib/objc/libobjcMsgSend32.dylib
+       0x2dd724000 -        0x2dd724f2f  libobjcMsgSend33.dylib (973.1) <346E0484-48FA-369B-8A64-93B5F5341CFE> /usr/lib/objc/libobjcMsgSend33.dylib
+       0x2e5724000 -        0x2e5724f2f  libobjcMsgSend34.dylib (973.1) <6A31F809-BCBE-3E01-A367-E91FDACCE324> /usr/lib/objc/libobjcMsgSend34.dylib

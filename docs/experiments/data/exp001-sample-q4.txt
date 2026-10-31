@@ -1,0 +1,17 @@
+Sort by top of stack, same collapsed (when >= 5):
+        _RNvXs_NtNtCs7tQSYhFT9Dl_6engine4exec8hash_aggNtB4_7HashAggNtB6_2Op4next  (in qe)        130
+        _RNvXs_NtNtCs7tQSYhFT9Dl_6engine4exec3opsNtB4_4ScanNtB6_2Op4next  (in qe)        97
+        _RINvMs6_NtCsdnfh2UXVlgZ_9hashbrown3rawINtB6_8RawTableTINtNtCs8Hh7wWMBHrQ_5alloc5boxed3BoxShEmEE14reserve_rehashNCINvNtB8_3map11make_hasherBQ_mINtNtCs3bJEMBXHbwl_4core4hash18BuildHasherDefaultNtNtNtCs7tQSYhFT9Dl_6engine4exec4hash8FxHasherEE0EB39_  (in qe)        89
+        _RINvMsk_NtCs8Hh7wWMBHrQ_5alloc3vecINtB6_3VecNtNtNtCs7tQSYhFT9Dl_6engine4exec8hash_agg2StE14extend_trustedINtNtNtNtCs3bJEMBXHbwl_4core4iter8adapters3map3MapINtNtNtB1O_5slice4iter4IterNtNtNtBM_4plan4expr7AggCallENvBI_4initEEBM_  (in qe)        84
+        _RNvNtNtCs3bJEMBXHbwl_4core3str8converts9from_utf8  (in qe)        71
+        _RNvXs2_NtNtCs3bJEMBXHbwl_4core3num11float_parsedNtNtNtB9_3str6traits7FromStr8from_str  (in qe)        60
+        _RNvNtNtCs7tQSYhFT9Dl_6engine7storage3csv10next_field  (in qe)        51
+        _platform_memcmp  (in libsystem_platform.dylib)        35
+        _platform_memmove  (in libsystem_platform.dylib)        35
+        _RNvMs1_NtCsdnfh2UXVlgZ_9hashbrown3mapINtB5_7HashMapINtNtCs8Hh7wWMBHrQ_5alloc5boxed3BoxShEmINtNtCs3bJEMBXHbwl_4core4hash18BuildHasherDefaultNtNtNtCs7tQSYhFT9Dl_6engine4exec4hash8FxHasherEE6insertB2j_  (in qe)        21
+        _malloc_zone_malloc  (in libsystem_malloc.dylib)        16
+        _RNvMs1_NtCs7tQSYhFT9Dl_6engine5typesNtB5_6Column10encode_key  (in qe)        13
+        _xzm_xzone_malloc_tiny  (in libsystem_malloc.dylib)        11
+        <deduplicated_symbol>  (in libsystem_malloc.dylib)        9
+        DYLD-STUB$$memcpy  (in qe)        6
+
