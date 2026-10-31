@@ -466,8 +466,10 @@ impl AggTable {
     }
 
     /// Fold group `og` of `other` (int mode) into this table, leaving `other` untouched.
-    fn merge_one_int(&mut self, other: &AggTable, og: usize) {
-        let na = self.spec.aggs.len();
+    /// `aggs` is passed in (not cloned from `self.spec`): all partition tables share one `Arc<AggSpec>`, and a
+    /// per-group refcount increment from every thread turned into heavy cache-line contention (EXP-004).
+    fn merge_one_int(&mut self, other: &AggTable, og: usize, aggs: &[AggCall]) {
+        let na = aggs.len();
         let t = if Some(og as u32) == other.null_gid {
             match self.null_gid {
                 Some(g) => g,
@@ -492,8 +494,7 @@ impl AggTable {
                 }
             }
         } as usize;
-        let spec = self.spec.clone();
-        for (j, call) in spec.aggs.iter().enumerate() {
+        for (j, call) in aggs.iter().enumerate() {
             merge_state_ref(&mut self.states[t * na + j], &other.states[og * na + j], call);
         }
     }
@@ -541,6 +542,7 @@ struct Segments {
 /// order, so there is no serial tail and the result does not depend on the thread count.
 fn partitioned_merge(ctx: &ExecCtx, spec: &Arc<AggSpec>, tables: Vec<AggTable>) -> Result<Vec<(Vec<Column>, usize)>> {
     ctx.run(|| {
+        let aggs: &[AggCall] = &spec.aggs;
         let buckets: Vec<Vec<Vec<u32>>> = tables.par_iter().map(|t| t.int_buckets()).collect();
         (0..AggTable::PARTS)
             .into_par_iter()
@@ -548,7 +550,7 @@ fn partitioned_merge(ctx: &ExecCtx, spec: &Arc<AggSpec>, tables: Vec<AggTable>) 
                 let mut part = AggTable::new(spec.clone());
                 for (c, t) in tables.iter().enumerate() {
                     for &og in &buckets[c][p] {
-                        part.merge_one_int(t, og as usize);
+                        part.merge_one_int(t, og as usize, aggs);
                     }
                 }
                 part.finish()
