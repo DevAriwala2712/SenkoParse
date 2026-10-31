@@ -94,3 +94,20 @@ Appended by `python3 bench/run.py`. Every performance claim must have a row here
 | 10x | 3749 | duckdb file | 6.959/7.223/7.255 | 0.54 | 232.0/244.6/244.8 | 0.0 | 549860 |
 
 Output rows were compared as sorted multisets and are identical across the three engines at every size. This is one query on one data shape; it says nothing about high-cardinality GROUP BY or large join build sides, which are not bounded.
+
+**Ratio at 10x:** 69.843 s / 4.78 s = 14.6x (qe pipe vs DuckDB 2.0.0 pipe, min wall). The "69" in the wall-time chart is DuckDB's time in seconds, not a speedup.
+
+### Re-run on Apple M3 Pro, DuckDB 1.4.5 (2026-11-01)
+
+Same query and settings (1 thread each, DuckDB `memory_limit=256MB`), data from `.demo-data`, 2 runs per cell, wall and peak RSS from `/usr/bin/time -l`. DuckDB 1.4.5 is the newest pip release available for macOS; this is not the 2.0.0 of the table above. Peak temp use was not measured. Sorted output hashes of the three engines are identical at 5x; row counts are identical at 1x.
+
+| size | engine | wall s | peak RSS MiB |
+|---|---|---|---|
+| 1x | qe pipe | 0.25–0.29 | 46–47 |
+| 1x | duckdb 1.4.5 pipe | 1.06–1.07 | 301 |
+| 1x | duckdb 1.4.5 file | 0.49 | 106 |
+| 5x | qe pipe | 1.25–1.29 | 49–50 |
+| 5x | duckdb 1.4.5 pipe | 4.83–5.78 | 304–308 |
+| 5x | duckdb 1.4.5 file | 2.13 | 106–107 |
+
+qe vs DuckDB piped: about 3.7x at 1x and 3.9–4.6x at 5x. The 14.6x at 10x depends on DuckDB 2.0.0's piped slowdown growing with input size and was not reproduced on the Mac.

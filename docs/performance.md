@@ -109,7 +109,7 @@ Scan-bound queries reach about 5.8x on 11 threads (the machine has 5 performance
 | 5x | 1.9 GB | 2.54 s | 3.55 s | 18.3 s |
 | 10x | 3.7 GB | 4.78 s | 6.96 s | 69.8 s |
 
-One query (a 50-id join), one reconstructed data shape, 4-core Xeon container, 1 thread each. These wall times describe this query only and are **not** a general speed claim. Full table with RSS and temp: [BENCHMARKS.md](../BENCHMARKS.md#piped-streaming-qe---stdin-vs-duckdb-200-exp-005-stream).
+One query (a 50-id join), one reconstructed data shape, 4-core Xeon container, 1 thread each. These wall times describe this query only and are **not** a general speed claim. The 69.8 s is DuckDB 2.0.0 piped at 10x; the ratio to `qe` is 14.6x. An M3 Pro re-run with DuckDB 1.4.5 gave about 3.7x (1x) and 3.9–4.6x (5x). Full table with RSS and temp: [BENCHMARKS.md](../BENCHMARKS.md#piped-streaming-qe---stdin-vs-duckdb-200-exp-005-stream).
 
 ## What did not work, or is not yet worth it
 

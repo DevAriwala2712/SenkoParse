@@ -38,6 +38,8 @@ DuckDB issue #25165 reports that `read_csv('/dev/stdin')` buffers piped input an
 </tr>
 </table>
 
+<sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run on an Apple M3 Pro with DuckDB 1.4.5 (the newest pip offers for macOS; 2.0.0 not available): about 3.7x at 1x and 3.9–4.6x at 5x vs DuckDB piped. 10x not re-run on the Mac. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
+
 > **What this does and does not show.** It shows that for a streaming join against a small lookup table, input buffering is bounded. It does **not** show that every query is bounded: group tables and join build sides still grow with their own size (see [Limits](#limits)).
 
 ---

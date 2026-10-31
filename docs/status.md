@@ -52,7 +52,7 @@ Every claim we are willing to make, its scope, and the evidence. Anything not in
 | C6 | File-mode results match SQLite on random queries | difftest, 3 file configurations | ✅ | [TEST-002](testing.md) |
 | C7 | Results never depend on `--threads` or `--chunk-bytes` | file mode, tests up to 11 threads; one full-size one-off | ✅ | [TEST-003](testing.md), [EXP-003](experiments/003-parallel-chunked-scan.md) |
 | C8 | File mode is 2.4–5.9x faster than M1 on the nine benchmark queries | Apple M3 Pro, warm cache, 1e7 rows | ✅ | [BENCHMARKS](../BENCHMARKS.md) |
-| C9 | On the streaming query, `qe` wall time is lower than DuckDB's (piped: 4.8 s vs 69.8 s at 10x; by filename: 4.8 s vs 7.0 s) | this query only, 1 thread each | 🟡 not a general speed claim | [BENCHMARKS](../BENCHMARKS.md) |
+| C9 | On the streaming query, `qe` wall time is lower than DuckDB's (piped: 4.8 s vs 69.8 s at 10x; by filename: 4.8 s vs 7.0 s; ratio 14.6x. Re-run on M3 Pro with DuckDB 1.4.5: about 3.7x at 1x, 3.9–4.6x at 5x) | this query only, 1 thread each; 10x not reproduced on the Mac | 🟡 not a general speed claim | [BENCHMARKS](../BENCHMARKS.md) |
 | C10 | Memory is bounded for **any** streamed query | | ❌ **not claimed**: group tables and join build sides grow with their own size | [ADR-0002](adr/0002-stream-first-direction.md) |
 | C11 | `f64` sums are bit-identical between stream mode and file mode | | ⚪ not tested (tolerance 1e-9 only) | [testing: gaps](testing.md#known-gaps) |
 | C12 | `qe` is faster than DuckDB on file mode | | ⚪ not measured | |
