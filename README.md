@@ -26,8 +26,8 @@ DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains 
 |---|---|---|---|
 | 1x · 375 MB | **42 MiB** · 0 | 337 MiB · 237 MiB | 216–246 MiB · 0 |
 | 2x · 750 MB | **42 MiB** · 0 | 338 MiB · 644 MiB | 234–250 MiB · 0 |
-| 5x · 1.9 GB | **42 MiB** · 0 | 341 MiB · 1.7 GB | 229–251 MiB · 0 |
-| 10x · 3.7 GB | **42 MiB** · 0 | 346 MiB · **5.6 GB** | 232–245 MiB · 0 |
+| 5x · 1.9 GB | **42 MiB** · 0 | 341 MiB · 1.6 GiB | 229–251 MiB · 0 |
+| 10x · 3.7 GB | **42 MiB** · 0 | 346 MiB · **5.4 GiB** | 232–245 MiB · 0 |
 
 <sub>3 runs per cell, 4-core Xeon container, both engines on 1 thread. RSS includes a 12.4 MiB measurement floor. The data is **our reconstruction** of the issue's shape, not the issue's own script. The output rows of all three engines are identical at every size.</sub>
 
@@ -42,7 +42,7 @@ DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains 
 </tr>
 </table>
 
-<sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run of the whole harness on an Apple M3 Pro (DuckDB 2.0.0, same data, byte-identical output digests): memory and temp results reproduce (SenkoParse 48 MiB, DuckDB piped about 340 MiB and 5.4 GB temp at 10x), but the wall-time ratio is smaller, **6.0x at 10x** (2.50 s vs 14.96 s; DuckDB piped varied 15–23 s). Treat the 14.6x as specific to the Linux container. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
+<sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run of the whole harness on an Apple M3 Pro (DuckDB 2.0.0, same data, byte-identical output digests): memory and temp results reproduce (SenkoParse 48 MiB, DuckDB piped about 340 MiB and 5.2 GiB temp at 10x), but the wall-time ratio is smaller, **6.0x at 10x** (2.50 s vs 14.96 s; DuckDB piped varied 15–23 s). Treat the 14.6x as specific to the Linux container. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
 
 > **What this does and does not show.** It shows that for a streaming join against a small lookup table, input buffering is bounded. It does **not** show that every query is bounded: group tables and join build sides still grow with their own size (see [Limits](#limits)).
 

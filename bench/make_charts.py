@@ -103,7 +103,7 @@ def main():
                     dict(name="qe --stdin", c=BLUE, y=med("qe pipe", "rss_mib"))],
                "piped input size", "peak RSS (MiB)", gb, ymax=400)
     line_chart(f"{OUT}/stream-temp.svg", "Temp-file use vs piped input size",
-               "Line chart. DuckDB piped writes 237 MiB to 5.6 GB of temp files as input grows; SenkoParse and DuckDB by filename write none.",
+               "Line chart. DuckDB piped writes 237 MiB to 5.4 GiB of temp files as input grows; SenkoParse and DuckDB by filename write none.",
                "Peak size of the engine's temp directory in MiB (max of 3 runs). Lower is better.",
                xs, [dict(name="DuckDB piped", c=ORANGE, y=[round(max(r["temp_mib"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s), 0) for s, _ in sizes]),
                     dict(name="qe --stdin, DuckDB by filename", c=BLUE, y=[0, 0, 0, 0], dy=-12)],

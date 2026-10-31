@@ -46,7 +46,7 @@ Every claim we are willing to make, its scope, and the evidence. Anything not in
 |---|---|---|---|---|
 | C1 | `qe --stdin` peak RSS stays at about 42 MiB while piped input grows from 375 MB to 3.7 GB | one query (50-id join), one reconstructed data shape, 4-core Xeon container, `--threads 1` | ✅ | [EXP-005-stream](experiments/005-stream-memory.md), raw: `docs/experiments/data/exp005-stream-raw.jsonl` |
 | C2 | `qe --stdin` creates no temp files | same | ✅ (temp dir sampled every 20 ms) | same |
-| C3 | DuckDB 2.0.0 piped spills 237 MiB to 5.6 GB of temp as input grows; by filename it spills none | same, `memory_limit=256MB`, 1 thread | ✅ | same |
+| C3 | DuckDB 2.0.0 piped spills 237 MiB to 5.4 GiB of temp as input grows; by filename it spills none | same, `memory_limit=256MB`, 1 thread | ✅ | same |
 | C4 | `qe` output equals DuckDB's output on that query | multiset of rows, every size, 3 runs | ✅ | same |
 | C5 | Stream mode returns the same rows and error text as file mode | tests in `tests/stream.rs` and difftest stream configurations | ✅ | [TEST-002, TEST-004](testing.md) |
 | C6 | File-mode results match SQLite on random queries | difftest, 3 file configurations | ✅ | [TEST-002](testing.md) |

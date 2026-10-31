@@ -44,7 +44,7 @@ if [ "$replay" = 0 ]; then
   else
     export DUCKDB_PY="$py"
   fi
-  # Disk: 5x input is 1.9 GB, DuckDB's temp use reaches ~1.6 GB (10x: 3.7 GB + 5.6 GB).
+  # Disk: 5x input is 1.9 GB, DuckDB's temp use reaches ~1.6 GB (10x: 3.7 GB + 5.4 GiB).
   free_kb=$(df -Pk . | awk 'NR==2{print $4}')
   [ "$free_kb" -lt 6000000 ] && echo "demo.sh: warning: under 6 GB free disk here; use --size 1x or 2x." >&2
 fi
