@@ -1,0 +1,32 @@
+# Experiment log
+
+Every performance idea from [ADR-0001](../adr/0001-parallel-and-fast-path-execution.md) gets one file
+here, **written before the code** (hypothesis, success/failure threshold) and **completed after**
+(raw numbers, result, decision). A result of "idea did not work" is a valid, documented outcome.
+No number, no claim: headline figures also go into [`BENCHMARKS.md`](../../BENCHMARKS.md).
+
+| ID | Idea | Status | Outcome |
+|---|---|---|---|
+| [EXP-001](001-baseline-breakdown.md) | Where does M1 spend its time? | Done | ~70% of a simple scan is field-boundary discovery; float parsing and per-group allocation are the other costs |
+| [EXP-002](002-quote-free-fast-path.md) | Quote-free scan fast path (skip unread fields) | Done, kept | `COUNT(*)` 0.57 -> 0.22 s, `SUM(id1)` 0.63 -> 0.30 s; no gain when the last column is read |
+| [EXP-003](003-parallel-chunked-scan.md) | Chunk-parallel scan, aggregation, join probe (M2) | Done, kept | 5.1-5.9x on 11 threads for scans; `GROUP BY id3` and the big join do not scale (next experiments) |
+| [EXP-004](004-integer-key-aggregation.md) | Integer-key group table, allocation-free output, partition-wise merge | Part A + 4b done; Part B on branch `exp/004-partitioned-merge` | `GROUP BY id3` 2.28 -> 1.29 s (11 threads); merge tree is the remaining serial tail (0.78 s) |
+| EXP-005 | Parallel build / dense-key array join | Planned | target join with `big` < 1 s |
+
+## Rules
+- Same machine, release build (`cargo build --release`), data from `scripts/gen_data.py --rows 1e7` (seed 42), warm page cache. Cold-cache runs need `sudo purge` and are labelled when done.
+- `python3 bench/exp.py` prints min / median / max **and every raw run**; paste the table verbatim.
+- Correctness gate for every code change: `cargo test` and `cargo test --release --test difftest -- --ignored` green on **both** paths (default and `--no-opt`). Record the result.
+- Record the commit/diff state the numbers came from. Noisy numbers are reported as noisy, not rerun until pretty.
+
+## Template
+```
+# EXP-NNN: <title>
+- Status / Date / Idea (ADR link) / Commit
+## Hypothesis  (mechanism, expected size, kill threshold)
+## Method      (exact commands, data, machine, what is held constant)
+## Results     (raw table, then interpretation)
+## Correctness (tests run + results)
+## Decision    (keep / drop / follow-up) and what changes in BENCHMARKS.md / ADR
+## Caveats
+```
