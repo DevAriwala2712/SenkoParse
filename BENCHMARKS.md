@@ -110,4 +110,4 @@ Same query and settings (1 thread each, DuckDB `memory_limit=256MB`), data from 
 | 5x | duckdb 1.4.5 pipe | 4.83–5.78 | 304–308 |
 | 5x | duckdb 1.4.5 file | 2.13 | 106–107 |
 
-qe vs DuckDB piped: about 3.7x at 1x and 3.9–4.6x at 5x. The 14.6x at 10x depends on DuckDB 2.0.0's piped slowdown growing with input size and was not reproduced on the Mac.
+qe vs DuckDB piped (min wall): 4.2x at 1x and 3.9x at 5x. Raw runs: `docs/experiments/data/exp005-mac-m3pro-duckdb145.jsonl`; chart: `docs/img/stream-wall-mac.svg`. The 14.6x at 10x depends on DuckDB 2.0.0's piped slowdown growing with input size and was not reproduced on the Mac.

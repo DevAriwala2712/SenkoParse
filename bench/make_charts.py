@@ -110,11 +110,21 @@ def main():
                "piped input size", "peak temp use (MiB)", gb, ymax=6000)
     line_chart(f"{OUT}/stream-wall.svg", "Wall time vs piped input size",
                "Line chart. SenkoParse takes 0.55 to 4.8 seconds; DuckDB by filename 0.9 to 7; DuckDB piped 2 to 70 seconds.",
-               "Wall time in seconds, minimum of 3 runs, one thread each. This query only. Lower is better.",
-               xs, [dict(name="DuckDB piped", c=ORANGE, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s) for s, _ in sizes]),
-                    dict(name="DuckDB by filename", c=AQUA, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb file" and r["size"] == s) for s, _ in sizes], dy=-6),
+               "Seconds, min of 3, 1 thread, Linux 4-core. At 3.7 GB: 4.78 s vs 69.8 s = 14.6x. One query.",
+               xs, [dict(name="DuckDB 2.0.0 piped", c=ORANGE, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s) for s, _ in sizes]),
+                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb file" and r["size"] == s) for s, _ in sizes], dy=-6),
                     dict(name="qe --stdin", c=BLUE, y=[min(r["wall_s"] for r in raw if r["engine"] == "qe pipe" and r["size"] == s) for s, _ in sizes], dy=12)],
                "piped input size", "wall time (s)", gb, ymax=80)
+    mac = [json.loads(l) for l in open(f"{ROOT}/docs/experiments/data/exp005-mac-m3pro-duckdb145.jsonl")]
+    msz = [("1x", 375), ("5x", 1874)]
+    mw = lambda e: [min(r["wall_s"] for r in mac if r["engine"] == e and r["size"] == s) for s, _ in msz]
+    line_chart(f"{OUT}/stream-wall-mac.svg", "Wall time on an M3 Pro, DuckDB 1.4.5",
+               "Line chart. On an Apple M3 Pro with DuckDB 1.4.5, SenkoParse takes 0.25 and 1.25 seconds at 0.4 and 1.9 GB; DuckDB piped 1.06 and 4.83; DuckDB by filename 0.49 and 2.13.",
+               "Seconds, min of 2, 1 thread. qe vs DuckDB piped: 4.2x at 0.4 GB, 3.9x at 1.9 GB. One query.",
+               [mb / 1000 for _, mb in msz], [dict(name="DuckDB 1.4.5 piped", c=ORANGE, y=mw("duckdb pipe")),
+                    dict(name="DuckDB 1.4.5 file", c=AQUA, y=mw("duckdb file"), dy=-6),
+                    dict(name="qe --stdin", c=BLUE, y=mw("qe pipe"), dy=12)],
+               "piped input size", "wall time (s)", gb, ymax=6)
     cats = ["Q1 global aggregate", "Q2 group by id1 (10)", "Q3 group by id2 (1e4)", "Q4 group by id3 (6e6)", "Q5 group by string id4",
             "Q6 filter + aggregate", "Q7 join small + group", "Q8 join medium + group", "Q9 join big (1e7 x 1e7)"]
     m1 = [0.80, 0.74, 0.77, 2.54, 0.94, 0.74, 0.91, 0.98, 3.59]

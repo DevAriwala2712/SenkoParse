@@ -1,0 +1,12 @@
+{"wall_s": 0.29, "rss_mib": 46, "size": "1x", "input_mb": 375, "engine": "qe pipe", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 0.25, "rss_mib": 47, "size": "1x", "input_mb": 375, "engine": "qe pipe", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 1.07, "rss_mib": 301, "size": "1x", "input_mb": 375, "engine": "duckdb pipe", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 1.06, "rss_mib": 301, "size": "1x", "input_mb": 375, "engine": "duckdb pipe", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 0.49, "rss_mib": 106, "size": "1x", "input_mb": 375, "engine": "duckdb file", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 0.49, "rss_mib": 106, "size": "1x", "input_mb": 375, "engine": "duckdb file", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 1.29, "rss_mib": 49, "size": "5x", "input_mb": 1874, "engine": "qe pipe", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 1.25, "rss_mib": 50, "size": "5x", "input_mb": 1874, "engine": "qe pipe", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 5.78, "rss_mib": 304, "size": "5x", "input_mb": 1874, "engine": "duckdb pipe", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 4.83, "rss_mib": 308, "size": "5x", "input_mb": 1874, "engine": "duckdb pipe", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 2.13, "rss_mib": 107, "size": "5x", "input_mb": 1874, "engine": "duckdb file", "run": 1, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
+{"wall_s": 2.13, "rss_mib": 106, "size": "5x", "input_mb": 1874, "engine": "duckdb file", "run": 2, "machine": "Apple M3 Pro", "duckdb": "1.4.5", "source": "/usr/bin/time -l, 2026-11-01"}
