@@ -3,6 +3,7 @@ pub mod error;
 pub mod exec;
 pub mod output;
 pub mod plan;
+pub mod progress;
 pub mod sql;
 pub mod storage;
 pub mod types;

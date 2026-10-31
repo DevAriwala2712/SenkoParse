@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/engine", "crates/cli"]
-default-members = [".", "crates/engine", "crates/cli"]
+members = ["crates/engine", "crates/cli", "crates/demo"]
+default-members = [".", "crates/engine", "crates/cli", "crates/demo"]
 resolver = "2"
 
 # Root package exists only to host tests/difftest.rs (SQLite is a dev-only oracle).
