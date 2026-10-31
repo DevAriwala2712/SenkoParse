@@ -701,9 +701,9 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
         let stress = engine::run_collect_opts(
             &dir,
             &sql,
-            &engine::Options { threads: Some(3), chunk_bytes: Some(256), ..Default::default() },
+            &engine::Options { threads: Some(3), chunk_bytes: Some(256), agg_partition_groups: Some(0), ..Default::default() },
         );
-        for (label, res) in [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks", stress)] {
+        for (label, res) in [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks/forced partitioned merge", stress)] {
           match res {
             Err(e) => failures.push(format!("[seed {seed} q{qi}] {label} engine error: {e}\n  {sql}")),
             Ok((_, got)) => {

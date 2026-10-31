@@ -10,7 +10,7 @@ No number, no claim: headline figures also go into [`BENCHMARKS.md`](../../BENCH
 | [EXP-001](001-baseline-breakdown.md) | Where does M1 spend its time? | Done | ~70% of a simple scan is field-boundary discovery; float parsing and per-group allocation are the other costs |
 | [EXP-002](002-quote-free-fast-path.md) | Quote-free scan fast path (skip unread fields) | Done, kept | `COUNT(*)` 0.57 -> 0.22 s, `SUM(id1)` 0.63 -> 0.30 s; no gain when the last column is read |
 | [EXP-003](003-parallel-chunked-scan.md) | Chunk-parallel scan, aggregation, join probe (M2) | Done, kept | 5.1-5.9x on 11 threads for scans; `GROUP BY id3` and the big join do not scale (next experiments) |
-| [EXP-004](004-integer-key-aggregation.md) | Integer-key group table, allocation-free output, partition-wise merge | Part A + 4b done; Part B on branch `exp/004-partitioned-merge` | `GROUP BY id3` 2.28 -> 1.29 s (11 threads); merge tree is the remaining serial tail (0.78 s) |
+| [EXP-004](004-integer-key-aggregation.md) | Integer-key group table, allocation-free output, partition-wise merge | Done (Part B on branch `exp/004-partitioned-merge`, merge pending) | `GROUP BY id3` 2.28 -> 1.29 s (A + 4b) -> 0.80 s (B); a per-group `Arc` clone cost 4x CPU until found |
 | EXP-005 | Parallel build / dense-key array join | Planned | target join with `big` < 1 s |
 
 ## Rules
