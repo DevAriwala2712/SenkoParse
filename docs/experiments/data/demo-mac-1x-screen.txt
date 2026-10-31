@@ -1,0 +1,23 @@
+./demo.sh --size 1x   (live qe, DuckDB panel = RECORDED numbers, marked *)
+Final frame, copied from the terminal. Apple M3 Pro, macOS arm64, 11 cores, 18 GiB RAM.
+Wall time is NOT a speed claim. The DuckDB column is the recorded EXP-005-stream run, not run on this Mac.
+
+                   DuckDB (recorded): +248 MB on disk  ·  qe: 46 MiB
+                        ╭─ RESULT · 1x · 375 MB piped ─────────────────────────────────────────╮
+                        │                              SenkoParse          DuckDB (piped)      │
+                        │ peak RSS (sampled 100 ms)    46 MiB              337 MiB*            │
+                        │ peak temp on disk            0 B                 248 MB*             │
+                        │ wall time (not a claim)      0.4 s               2.1 s*              │
+                        │ output rows                  54,986              54,986*             │
+                        │ rows identical (sorted hash): ✓ row counts equal (hash n/a)          │
+                        ╰──────────────────────────────────────────────────────────────────────╯
+ machine: Darwin arm64 · Apple M3 Pro · 11 cores · 18.0 GiB RAM
+ DuckDB not installed here; DuckDB panel shows recorded numbers (2.0.0, memory_limit=256MB, threads=1)
+ query: SELECT a.* FROM a JOIN ids i ON a.center_id = i.id  [8 cols; ids: 50 rows]
+ One query, one data shape (cf. DuckDB #25165): not a general speed claim. * recorded
+
+Notes
+- Layout needs about 118 columns; the Terminal panel here is about 120 and renders cleanly.
+- duckdb==2.0.0 was not installable via pip on this Mac (index tops out at 1.4.5), so DuckDB was not run live.
+  Hash comparison therefore did not run ("hash n/a"); only row counts matched.
+- Live 1x qe runs on this Mac: 0.7 s (first, cold build) and 0.4 s; peak RSS 59 and 46 MiB.

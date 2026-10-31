@@ -1,0 +1,8 @@
+{"kind":"meta","size":"1x","total_bytes":374890210,"machine":"Darwin arm64 · Apple M3 Pro · 11 cores · 18.0 GiB RAM","duckdb":"not installed here; DuckDB panel shows recorded numbers (2.0.0, memory_limit=256MB, threads=1)","qe_settings":"--threads 1 (4 MiB blocks)","query":"SELECT a.* FROM a JOIN ids i ON a.center_id = i.id  [8 cols; ids: 50 rows]"}
+{"kind":"s","eng":"qe","t_ms":6,"bytes":0,"rss_kib":32,"temp":0,"rows":0}
+{"kind":"s","eng":"qe","t_ms":108,"bytes":0,"rss_kib":32,"temp":0,"rows":0}
+{"kind":"s","eng":"qe","t_ms":209,"bytes":147849216,"rss_kib":46432,"temp":0,"rows":12316}
+{"kind":"s","eng":"qe","t_ms":309,"bytes":298844160,"rss_kib":47008,"temp":0,"rows":24638}
+{"kind":"s","eng":"qe","t_ms":409,"bytes":374890210,"rss_kib":47008,"temp":0,"rows":36960}
+{"kind":"s","eng":"qe","t_ms":512,"bytes":374890210,"rss_kib":47008,"temp":0,"rows":49279}
+{"kind":"end","eng":"qe","t_ms":371,"ok":1,"peak_rss_kib":47008,"peak_temp":0,"rows":54986,"digest":"7af9dae79594ba77"}
