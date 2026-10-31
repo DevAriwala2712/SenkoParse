@@ -94,7 +94,7 @@ Low priority: SWAR tricks, `unsafe` micro-optimizations, GPU. Use them only afte
 
 ## Docs and experiments
 - `docs/adr/` decisions, `docs/experiments/` one file per experiment (hypothesis, method, raw numbers, correctness, decision). Write the hypothesis and kill threshold *before* the code, fill results after. `bench/exp.py` prints every raw run.
-- `README.md` has the quick start and current status.
+- `README.md` has the quick start and current status. `docs/README.md` indexes `docs/architecture.md`, `docs/performance.md`, `docs/testing.md` (tests written as research: claim, falsifier, method, oracle, result, threats; falsification log) and `docs/status.md` (claims ledger). Update `docs/status.md` whenever a claim, test count or limit changes; regenerate figures with `python3 bench/make_charts.py`.
 
 ## Working style
 - Small, reviewable steps. After each milestone: run the difftest, run the bench, update `BENCHMARKS.md`, summarize what changed in 3–5 lines.
