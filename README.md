@@ -20,7 +20,7 @@
 
 `gunzip -c big.csv.gz | qe --stdin t "SELECT ..."` should run in memory that **does not grow with the input**.
 
-DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains the projected columns, bounded by the input, where a filename read streams in constant memory) reports that `read_csv('/dev/stdin')` spills piped input to temp files. We reproduced it (DuckDB 2.0.0, `memory_limit=256MB`, 1 thread) and then measured `qe` on the same kind of query:
+DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains the projected columns, bounded by the input, where a filename read streams in constant memory) reports that `read_csv('/dev/stdin')` spills piped input to temp files (⚠️ as read from the issue page on 2026-11-01; the issue's own numbers are for DuckDB 1.5.5 and a different file, and the ADR's 383 MB / 144 / 324 MiB figures are unverified). We reproduced it (DuckDB 2.0.0, `memory_limit=256MB`, 1 thread) and then measured `qe` on the same kind of query:
 
 | Piped input | SenkoParse peak RSS · temp | DuckDB piped peak RSS · temp | DuckDB by filename peak RSS · temp |
 |---|---|---|---|
@@ -53,7 +53,7 @@ DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains 
 | | |
 |---|---|
 | **Headline** | Bounded-memory SQL over non-seekable CSV streams ([ADR-0002](docs/adr/0002-stream-first-direction.md)) |
-| **Correctness** | Randomized queries compared with SQLite on 5 engine configurations; 23 tests green; 2 mutation checks ([testing](docs/testing.md)) |
+| **Correctness** | Randomized queries compared with SQLite on 5 engine configurations; 23 tests green; 2 mutation checks ([testing](docs/testing.md)) · ⚠️ *unverified: not re-run in the 2026-11-01 benchmark review* |
 | **File mode speed** | 2.4–5.9x faster than the single-thread baseline on every benchmark query ([performance](docs/performance.md)) |
 | **Dependencies** | `memmap2`, `memchr`, `rayon`. SQLite only in tests; DuckDB only in `bench/` |
 | **Status** | Streaming tested and measured on **one** query. See the [status board](docs/status.md) for every claim and its evidence |
@@ -100,6 +100,8 @@ gunzip -c big.csv.gz | ./target/release/qe --data data --stdin t "SELECT k, SUM(
 `qe-demo` pipes the same file into `qe --stdin` and into DuckDB (`bench/duckdb_run.py`) at the same time and draws, per engine, RSS against input GB, temp-dir size, bytes consumed and rows written; at the end it compares the two outputs by sorted row hash. DuckDB is optional (`DEMO_INSTALL_DUCKDB=1 ./demo.sh` installs it into `.demo-venv`); without it the DuckDB panel shows the recorded EXP-005 numbers, marked `*`. `--replay` on `exp005-stream-raw.jsonl` only has per-run totals (no time series), and says so. `--record FILE` saves a live run as a replayable time series. Same scope as EXP-005-stream: one query, one reconstructed data shape, bounded input buffering for this streaming join. The demo runs both engines on one machine at once, so its wall times are not the EXP-005 numbers and are not a speed claim.
 
 #### Screenshots (MacBook Pro, Apple M3 Pro, 11 cores, 18 GiB; `./demo.sh`)
+
+> ⚠️ **Unverified.** These three screenshots were not re-checked in the 2026-11-01 review: their numbers (43 and 45 MiB) were not reproduced by a fresh run, and the DuckDB panel in the live ones shows recorded values, not a live DuckDB. The verified numbers are the tables and charts above.
 
 DuckDB was not installed in the environment of these two live runs (the default `python3` there was 3.9, which has no DuckDB 2.0.0 wheel; 2.0.0 does install on Python 3.11), so in them only SenkoParse is live. The DuckDB panel shows the recorded EXP-005-stream numbers, marked `*`, and the row-hash check did not run (row counts only). Wall times are not a speed claim. The 5x replay is the recorded Linux run (4 cores), not this Mac.
 
@@ -182,7 +184,7 @@ The speedups come from a short list of techniques, each with an experiment that 
 ## Tests
 
 ```bash
-cargo test                                          # 23 tests, ~45 s (debug)
+cargo test                                          # 23 tests, ~45 s (debug); count unverified in the 2026-11-01 review
 cargo test --release --test difftest -- --ignored  # large randomized run (slow; see docs/testing.md)
 ```
 
