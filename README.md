@@ -105,16 +105,16 @@ gunzip -c big.csv.gz | ./target/release/qe --data data --stdin t "SELECT k, SUM(
 ./target/release/qe --data data/ --serve          # then open http://127.0.0.1:8080/  (--port N to change)
 ```
 
-A local SQL workbench served by the `qe` binary itself: std-only HTTP, bound to `127.0.0.1`, no extra dependencies, no build step. It has a schema explorer (tables, column types, sizes, filter, right-click actions), a highlighted editor with autocomplete and tabs, a virtualized results grid with sort, pin, resize and CSV/JSON export, query history, light and dark themes, and a status bar with time, sampled peak RSS and table size per run. A link like `http://127.0.0.1:8080/#q=SELECT%201` pre-fills and runs a query (`theme=light` and `hist=1` also work).
+A local SQL workbench served by the `qe` binary itself: std-only HTTP, bound to `127.0.0.1`, no extra dependencies, no build step. It has a schema explorer (tables, column types, sizes, filter, right-click actions), a highlighted editor with autocomplete and tabs, a virtualized results grid with sort, pin, resize and CSV/JSON export, query history, light and dark themes (the screenshots use the light theme), and a status bar with time, sampled peak RSS and table size per run. A link like `http://127.0.0.1:8080/#q=SELECT%201` pre-fills and runs a query (`theme=light` and `hist=1` also work).
 
 The screenshots below were taken on the 100,000-row sample from `scripts/gen_data.py` (`data/`, M3 Pro). They show the interface, not performance: nothing here is a speed or memory claim. The UI reads files from the data folder, so bounded-memory streaming (`--stdin`) stays a command-line feature.
 
 | | |
 |---|---|
-| ![Dark theme: schema explorer, editor, results grid, history, run stats](docs/img/ui-workbench-dark.png) | ![Light theme: a JOIN with GROUP BY](docs/img/ui-workbench-light.png) |
-| Dark theme, a GROUP BY with query history open | Light theme, a JOIN |
+| ![Schema explorer, SQL editor, results grid, query history and run stats](docs/img/ui-workbench-results.png) | ![A JOIN with GROUP BY](docs/img/ui-workbench-join.png) |
+| A GROUP BY with the query history panel open | A JOIN |
 
-![A syntax error underlined in the editor with line and column](docs/img/ui-workbench-error.png)
+![A syntax error underlined in the editor, with line and column](docs/img/ui-workbench-error.png)
 
 ### Options
 
