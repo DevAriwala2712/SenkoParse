@@ -480,6 +480,11 @@ addEventListener('resize',()=>{renderResult()});
   try{
     const qs=await fetch('/api/queries').then(r=>r.json());examples=qs;renderExamples();
     await loadDbs();await loadTables();setConn('ok','connected');
+    // Shareable links: #q=<url-encoded SQL> fills the editor and runs it; optional theme=light|dark, hist=1.
+    const hp=new URLSearchParams(location.hash.slice(1));
+    if(hp.get('theme')==='light'||hp.get('theme')==='dark'){document.documentElement.dataset.theme=hp.get('theme')}
+    if(hp.get('hist')==='1'){prefs.hist=true;applySide()}
+    if(hp.get('q')){setSql(hp.get('q'));await run()}
   }catch(e){setConn('bad','disconnected')}
 })();
 </script></body></html>

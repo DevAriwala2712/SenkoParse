@@ -99,17 +99,22 @@ gunzip -c big.csv.gz | ./target/release/qe --data data --stdin t "SELECT k, SUM(
 
 `qe-demo` pipes the same file into `qe --stdin` and into DuckDB (`bench/duckdb_run.py`) at the same time and draws, per engine, RSS against input GB, temp-dir size, bytes consumed and rows written; at the end it compares the two outputs by sorted row hash. DuckDB is optional (`DEMO_INSTALL_DUCKDB=1 ./demo.sh` installs it into `.demo-venv`); without it the DuckDB panel shows the recorded EXP-005 numbers, marked `*`. `--replay` on `exp005-stream-raw.jsonl` only has per-run totals (no time series), and says so. `--record FILE` saves a live run as a replayable time series. Same scope as EXP-005-stream: one query, one reconstructed data shape, bounded input buffering for this streaming join. The demo runs both engines on one machine at once, so its wall times are not the EXP-005 numbers and are not a speed claim.
 
-#### Screenshots (MacBook Pro, Apple M3 Pro, 11 cores, 18 GiB; `./demo.sh`)
+### Web workbench (`qe --serve`)
 
-> ⚠️ **Unverified.** These three screenshots were not re-checked in the 2026-11-01 review: their numbers (43 and 45 MiB) were not reproduced by a fresh run, and the DuckDB panel in the live ones shows recorded values, not a live DuckDB. The verified numbers are the tables and charts above.
+```bash
+./target/release/qe --data data/ --serve          # then open http://127.0.0.1:8080/  (--port N to change)
+```
 
-DuckDB was not installed in the environment of these two live runs (the default `python3` there was 3.9, which has no DuckDB 2.0.0 wheel; 2.0.0 does install on Python 3.11), so in them only SenkoParse is live. The DuckDB panel shows the recorded EXP-005-stream numbers, marked `*`, and the row-hash check did not run (row counts only). Wall times are not a speed claim. The 5x replay is the recorded Linux run (4 cores), not this Mac.
+A local SQL workbench served by the `qe` binary itself: std-only HTTP, bound to `127.0.0.1`, no extra dependencies, no build step. It has a schema explorer (tables, column types, sizes, filter, right-click actions), a highlighted editor with autocomplete and tabs, a virtualized results grid with sort, pin, resize and CSV/JSON export, query history, light and dark themes, and a status bar with time, sampled peak RSS and table size per run. A link like `http://127.0.0.1:8080/#q=SELECT%201` pre-fills and runs a query (`theme=light` and `hist=1` also work).
 
-| Run | Screenshot |
+The screenshots below were taken on the 100,000-row sample from `scripts/gen_data.py` (`data/`, M3 Pro). They show the interface, not performance: nothing here is a speed or memory claim. The UI reads files from the data folder, so bounded-memory streaming (`--stdin`) stays a command-line feature.
+
+| | |
 |---|---|
-| Replay of the recorded 5x run (DuckDB live in the recording, hash identical) | ![5x replay](docs/img/demo-replay-5x.png) |
-| Live 1x, 375 MB piped: SenkoParse 43 MiB peak RSS, 0 B temp | ![live 1x](docs/img/demo-live-1x.png) |
-| Live 5x, 1.87 GB piped: SenkoParse 45 MiB peak RSS, 0 B temp | ![live 5x](docs/img/demo-live-5x.png) |
+| ![Dark theme: schema explorer, editor, results grid, history, run stats](docs/img/ui-workbench-dark.png) | ![Light theme: a JOIN with GROUP BY](docs/img/ui-workbench-light.png) |
+| Dark theme, a GROUP BY with query history open | Light theme, a JOIN |
+
+![A syntax error underlined in the editor with line and column](docs/img/ui-workbench-error.png)
 
 ### Options
 
