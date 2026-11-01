@@ -20,7 +20,7 @@ impl<R: Read> Read for Counting<R> {
 }
 
 /// Current resident set size in bytes of this process, if the platform tells us.
-fn rss_bytes() -> Option<u64> {
+pub(crate) fn rss_bytes() -> Option<u64> {
     if let Ok(s) = std::fs::read_to_string("/proc/self/statm") {
         let pages: u64 = s.split_whitespace().nth(1)?.parse().ok()?;
         return Some(pages * 4096);
