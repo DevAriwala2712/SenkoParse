@@ -3,6 +3,7 @@ pub mod eval;
 pub mod hash;
 mod hash_agg;
 mod hash_join;
+pub use hash_join::stats as join_stats;
 mod ops;
 pub mod par;
 

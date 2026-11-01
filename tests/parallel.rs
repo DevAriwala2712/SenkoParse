@@ -262,3 +262,64 @@ fn table_reuse_gives_identical_results_for_1_2_and_4_threads() {
         }
     }
 }
+
+/// EXP-008: the integer-key join builds its table in parallel (64 hash partitions once the build side has 65,536 rows
+/// or more). Results, the row order of unordered output, and `f64` sums must be bit-identical for 1, 2 and 4 threads,
+/// with duplicate build keys, NULL keys, negative and sparse keys, inner and LEFT joins; and equal to the serial
+/// `--no-opt` byte-key join as a multiset.
+#[test]
+fn integer_join_results_do_not_depend_on_thread_count() {
+    let mut x: u64 = 0xA5A5_1234_DEAD_BEEF;
+    let mut next = || {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        x
+    };
+    let mut key = |r: u64| -> String {
+        match r % 100 {
+            0..=3 => String::new(), // NULL
+            4..=29 => ((r >> 8) % 5000).to_string(),
+            30..=49 => (-(((r >> 8) % 5000) as i64)).to_string(),
+            50..=69 => (((r >> 8) % 3000) << 40).to_string(), // sparse
+            _ => ((r >> 8) % 20_000).to_string(),
+        }
+    };
+    let mut dcsv = String::from("k,w\n");
+    for _ in 0..70_000 {
+        let r = next();
+        dcsv.push_str(&format!("{},{}\n", key(r), (r >> 40) % 1000));
+    }
+    let mut fcsv = String::from("id,k,v\n");
+    for i in 0..30_000 {
+        let r = next();
+        let v = ((r % 2_000_001) as f64 - 1_000_000.0) * 10f64.powi((r >> 40) as i32 % 9 - 4);
+        fcsv.push_str(&format!("{i},{},{v}\n", key(r.rotate_left(17))));
+    }
+    let d = dir("intjoin", &dcsv, "[d]\nk = \"i64\"\nw = \"i64\"\n\n[f]\nid = \"i64\"\nk = \"i64\"\nv = \"f64\"\n");
+    std::fs::write(d.join("f.csv"), &fcsv).unwrap();
+    std::fs::rename(d.join("t.csv"), d.join("d.csv")).unwrap();
+    let queries = [
+        "SELECT COUNT(*), SUM(f.v), AVG(f.v), SUM(d.w) FROM f JOIN d ON f.k = d.k",
+        "SELECT COUNT(*), SUM(f.v), COUNT(d.w) FROM f LEFT JOIN d ON f.k = d.k",
+        "SELECT f.id, d.w FROM f JOIN d ON f.k = d.k", // unordered: output order must be stable too
+        "SELECT d.w, f.id FROM d JOIN f ON f.k = d.k",
+        "SELECT f.id, d.w FROM f LEFT JOIN d ON f.k = d.k",
+        "SELECT d.w, COUNT(*), SUM(f.v) FROM f JOIN d ON f.k = d.k GROUP BY d.w",
+    ];
+    let o = |threads: usize| opts(threads, 64 * 1024);
+    for q in queries {
+        let base = run(&d, q, o(1)).unwrap();
+        for threads in [2, 4] {
+            assert_eq!(run(&d, q, o(threads)).unwrap(), base, "threads={threads}: {q} (must be bit-identical, incl. row order)");
+        }
+        if !q.contains("AVG") && !q.contains("SUM(f.v)") {
+            let canon = |mut r: Vec<Vec<Value>>| {
+                r.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+                r
+            };
+            let reference = run(&d, q, Options { no_opt: true, ..Default::default() }).unwrap();
+            assert_eq!(canon(base), canon(reference), "vs --no-opt byte-key join: {q}");
+        }
+    }
+}

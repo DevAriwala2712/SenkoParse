@@ -169,3 +169,15 @@ Reproduced: flat qe memory (about 48 MiB here vs 42 MiB there; floors differ), D
 | Q9 join big (1e7x1e7) | 11.10 | 148.47 | 164.36 | 25.02 | 25.02 | 24.77 | 5.94x | 0.07 | 0.44 | 8150 | 4629 |
 
 Caveats: qe peak RSS includes the memory-mapped input (about 5.4 GB for a 5.55 GB file), so it is not comparable to DuckDB's RSS as "memory used". The machine has 18 GiB and swap was in use, so large-RSS cells (qe Q3, Q8, Q9; DuckDB Q4, Q5, Q9) may include memory-pressure effects; qe's run-to-run spread is large on Q3 (1t: 16-35 s), Q8 and Q9 (all cores: 85-135 s). Cold-cache runs are not done yet (need `sudo purge`).
+
+## EXP-008: integer-keyed parallel join table, before/after (cloud container, NOT the M3 Pro)
+
+- machine: 4 vCPU Intel Xeon @ 2.10 GHz, 16 GiB RAM, no swap, Linux 6.18; warm cache; 2026-11-01. Relative gains only.
+- data: `scripts/gen_data.py --rows 1e7|3e7|5e7` (seed 42). Wall time of the whole process, all cores, min of 3 interleaved runs per binary (medians and raw runs in `docs/experiments/008-int-join.md`).
+- before = `cf9a1c1`, after = this commit.
+
+| query | rows | before s | after s | speedup |
+|---|---|---|---|---|
+| Q7 join small + grp | 1e7 / 3e7 / 5e7 | 0.62 / 1.93 / 3.04 | 0.54 / 1.66 / 2.68 | 1.14x / 1.16x / 1.13x |
+| Q8 join medium + grp | 1e7 / 3e7 / 5e7 | 0.80 / 3.42 / 6.20 | 0.67 / 2.86 / 5.42 | 1.20x / 1.20x / 1.14x |
+| Q9 join big (N x N) | 1e7 / 3e7 / 5e7 | 9.32 / 37.18 / 78.80 | 1.64 / 5.85 / 9.04 | 5.69x / 6.36x / 8.71x |

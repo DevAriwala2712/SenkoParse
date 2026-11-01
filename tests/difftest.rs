@@ -776,3 +776,201 @@ fn difftest_large() {
         run(seed + s, rows, queries, "large");
     }
 }
+
+// ----------------------------------------------------------------------------- EXP-008: join key cases
+//
+// Directed join cases against SQLite. The integer-key join (`ON f.k = d.k`, also date and decimal keys) and the
+// byte-key fallback (string key, composite key) are run on the SAME data and must both equal SQLite. Thread-local
+// counters from the engine prove which index each run really used.
+
+const JDATE0: i32 = 18262; // 2020-01-01
+
+fn join_row_f(id: i64, k: Option<i64>, rng: &mut Rng) -> Vec<Cell> {
+    let v = Cell::I(rng.range(-9, 9));
+    match k {
+        Some(k) => vec![
+            Cell::I(id),
+            Cell::I(k),
+            Cell::S(format!("s{k}")),
+            Cell::I(k.rem_euclid(3)),
+            Cell::Date(JDATE0 + k.rem_euclid(50) as i32),
+            Cell::D(k.rem_euclid(97) * 25, 2),
+            v,
+        ],
+        None => vec![Cell::I(id), Cell::Null, Cell::Null, Cell::Null, Cell::Null, Cell::Null, v],
+    }
+}
+
+fn join_row_d(k: Option<i64>, rng: &mut Rng) -> Vec<Cell> {
+    let w = Cell::I(rng.range(1, 100));
+    match k {
+        Some(k) => vec![
+            Cell::I(k),
+            Cell::S(format!("s{k}")),
+            Cell::I(k.rem_euclid(3)),
+            Cell::Date(JDATE0 + k.rem_euclid(50) as i32),
+            Cell::D(k.rem_euclid(97) * 25, 2),
+            w,
+        ],
+        None => vec![Cell::Null, Cell::Null, Cell::Null, Cell::Null, Cell::Null, w],
+    }
+}
+
+fn join_tables(f_keys: Vec<Option<i64>>, d_keys: Vec<Option<i64>>, rng: &mut Rng) -> Vec<Table> {
+    let f = Table {
+        name: "f",
+        cols: vec![
+            ("id", K::I, "i64"),
+            ("k", K::I, "i64"),
+            ("ks", K::S, "str"),
+            ("k2", K::I, "i64"),
+            ("dt", K::Dt, "date"),
+            ("dc", K::D, "decimal(2)"),
+            ("v", K::I, "i64"),
+        ],
+        rows: f_keys.into_iter().enumerate().map(|(i, k)| join_row_f(i as i64, k, rng)).collect(),
+    };
+    let d = Table {
+        name: "d",
+        cols: vec![
+            ("k", K::I, "i64"),
+            ("ks", K::S, "str"),
+            ("k2", K::I, "i64"),
+            ("dt", K::Dt, "date"),
+            ("dc", K::D, "decimal(2)"),
+            ("w", K::I, "i64"),
+        ],
+        rows: d_keys.into_iter().map(|k| join_row_d(k, rng)).collect(),
+    };
+    vec![f, d]
+}
+
+/// (name, f keys, d keys, big?) - every variant is run through both index kinds.
+fn join_variants(rng: &mut Rng) -> Vec<(&'static str, Vec<Table>, bool)> {
+    let some = |v: Vec<i64>| v.into_iter().map(Some).collect::<Vec<_>>();
+    let mut out = Vec::new();
+    // sparse keys: only the high bits differ (j << 40), plus keys near the i64 limits
+    let sparse_pool: Vec<i64> = (1..=40i64)
+        .map(|j| j << 40)
+        .chain([0, 4_000_000_000_000_000_000, -4_000_000_000_000_000_000, 1 << 62, -(1 << 62), i64::MAX - 1, i64::MIN + 1])
+        .collect();
+    let fk = some((0..300).map(|_| *rng.pick(&sparse_pool)).collect());
+    let dk = some(sparse_pool.clone());
+    out.push(("sparse", join_tables(fk, dk, rng), false));
+    // negative keys
+    let fk = some((0..300).map(|_| rng.range(-320, 320)).collect());
+    let dk = some((-300..=300).collect());
+    out.push(("negative", join_tables(fk, dk, rng), false));
+    // NULL keys on both sides (NULL never matches NULL)
+    let nullable = |rng: &mut Rng, n: usize, hi: i64| -> Vec<Option<i64>> {
+        (0..n).map(|_| if rng.chance(25) { None } else { Some(rng.range(0, hi)) }).collect()
+    };
+    let (fk, dk) = (nullable(rng, 300, 30), nullable(rng, 50, 30));
+    out.push(("nulls", join_tables(fk, dk, rng), false));
+    // duplicate build keys (1 to 5 copies each), with the dimension both as the right and the left side
+    let fk = some((0..300).map(|_| rng.range(0, 45)).collect());
+    let mut dk = Vec::new();
+    for k in 0..40 {
+        for _ in 0..rng.range(1, 5) {
+            dk.push(Some(k));
+        }
+    }
+    out.push(("duplicates", join_tables(fk, dk, rng), false));
+    // unmatched probe rows and NULLs for LEFT JOIN
+    let (fk, dk) = (nullable(rng, 300, 60), nullable(rng, 30, 25));
+    out.push(("unmatched", join_tables(fk, dk, rng), false));
+    // empty tables
+    out.push(("empty-d", join_tables(some((0..40).map(|_| rng.range(0, 9)).collect()), vec![], rng), false));
+    out.push(("empty-f", join_tables(vec![], some((0..30).collect()), rng), false));
+    out.push(("empty-both", join_tables(vec![], vec![], rng), false));
+    // large build side: at least 65,536 rows, so the partitioned parallel build runs; dense, sparse, negative, NULL, duplicates
+    let big_key = |rng: &mut Rng| -> Option<i64> {
+        match rng.below(100) {
+            0..=2 => None,
+            3..=29 => Some(rng.range(-20_000, 20_000)),
+            30..=49 => Some(rng.range(0, 3_000) << 36),
+            _ => Some(rng.range(0, 40_000)),
+        }
+    };
+    let dk: Vec<Option<i64>> = (0..70_000).map(|_| big_key(rng)).collect();
+    let fk: Vec<Option<i64>> = (0..20_000).map(|_| big_key(rng)).collect();
+    out.push(("big-70k", join_tables(fk, dk, rng), true));
+    out
+}
+
+#[test]
+fn difftest_join_key_cases() {
+    use engine::exec::join_stats;
+    let mut rng = Rng::new(808);
+    let mut failures = Vec::new();
+    let (mut compared, mut nonempty) = (0usize, 0usize);
+    for (name, tabs, big) in join_variants(&mut rng) {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("difftest-data").join(format!("join-{name}"));
+        std::fs::create_dir_all(&dir).unwrap();
+        for t in &tabs {
+            write_csv(&dir, t, &mut rng, true);
+        }
+        write_schema(&dir, &tabs);
+        let conn = load_sqlite(&tabs);
+        // (ON clause, runs on the integer path?)
+        let mut ons: Vec<(&str, bool)> = vec![("f.k = d.k", true), ("f.ks = d.ks", false), ("f.k = d.k AND f.k2 = d.k2", false)];
+        if !big {
+            ons.push(("f.dt = d.dt", true));
+            ons.push(("f.dc = d.dc", true));
+        }
+        let shapes: Vec<&str> = if big {
+            vec![
+                "SELECT COUNT(*), SUM(f.v), SUM(d.w) FROM f JOIN d ON {on}",
+                "SELECT COUNT(*), COUNT(d.w), SUM(d.w) FROM f LEFT JOIN d ON {on}",
+            ]
+        } else {
+            vec![
+                "SELECT COUNT(*), SUM(f.v), SUM(d.w) FROM f JOIN d ON {on}",
+                "SELECT COUNT(*), SUM(f.v), SUM(d.w) FROM d JOIN f ON {on}",
+                "SELECT f.id, d.w FROM f JOIN d ON {on}",
+                "SELECT d.w, f.id FROM d JOIN f ON {on}",
+                "SELECT f.id, d.w FROM f LEFT JOIN d ON {on}",
+                "SELECT COUNT(*), COUNT(d.w), SUM(d.w) FROM f LEFT JOIN d ON {on}",
+            ]
+        };
+        let chunk = if big { 64 * 1024 } else { 200 };
+        let mut configs: Vec<(String, engine::Options)> = vec![("default".into(), engine::Options::default())];
+        for t in [1, 2, 4] {
+            configs.push((format!("{t} threads/{chunk}B chunks"), engine::Options { threads: Some(t), chunk_bytes: Some(chunk), ..Default::default() }));
+        }
+        configs.push(("--no-opt".into(), engine::Options { no_opt: true, ..Default::default() }));
+        for shape in &shapes {
+            for (on, int_path) in &ons {
+                let sql = shape.replace("{on}", on);
+                let want = sqlite_rows(&conn, &sql).unwrap_or_else(|e| panic!("SQLite rejects {sql}: {e}"));
+                for (label, o) in &configs {
+                    let (i0, b0) = (join_stats::int_builds(), join_stats::byte_builds());
+                    let res = engine::run_collect_opts(&dir, &sql, o);
+                    let (di, db) = (join_stats::int_builds() - i0, join_stats::byte_builds() - b0);
+                    let expect_int = *int_path && !o.no_opt;
+                    if (expect_int && (di == 0 || db != 0)) || (!expect_int && (di != 0 || db == 0)) {
+                        failures.push(format!("[{name}] {label}: wrong join index (int builds {di}, byte builds {db}, expected int path = {expect_int})\n  {sql}"));
+                    }
+                    match res {
+                        Err(e) => failures.push(format!("[{name}] {label} engine error: {e}\n  {sql}")),
+                        Ok((_, got)) => {
+                            compared += 1;
+                            if !want.is_empty() {
+                                nonempty += 1;
+                            }
+                            let got: Vec<Vec<V>> = got.iter().map(|r| r.iter().map(from_engine).collect()).collect();
+                            if let Err(m) = compare(&got, &want, false) {
+                                failures.push(format!("[{name}] MISMATCH {label}: {m}\n  {sql}"));
+                            }
+                        }
+                    }
+                }
+                if failures.len() >= 5 {
+                    break;
+                }
+            }
+        }
+    }
+    assert!(failures.is_empty(), "\n{}", failures.join("\n\n"));
+    eprintln!("join key cases: {compared} engine runs equal to SQLite ({nonempty} with non-empty results)");
+}
