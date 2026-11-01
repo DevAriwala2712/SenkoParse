@@ -37,6 +37,7 @@ flowchart TB
 | [performance.md](performance.md) | benchmark table, a catalog of seven techniques with measured effect, what did not work, tuning knobs, how to measure |
 | [testing.md](testing.md) | test pyramid, five suites written as research (claim, falsifier, method, oracle, result, threats), falsification log, coverage matrix, gaps |
 | [status.md](status.md) | milestones, streaming plan, claims ledger, limits, open items |
+| [roadmap.md](roadmap.md) | future work as testable hypotheses with targets and falsifiers; the baseline vs DuckDB |
 | [adr/0001](adr/0001-parallel-and-fast-path-execution.md) | parallel execution and fast paths after M1 |
 | [adr/0002](adr/0002-stream-first-direction.md) | the direction change to bounded-memory streaming |
 | [experiments/](experiments/README.md) | EXP-001 to EXP-005-stream and their raw data in `experiments/data/` |

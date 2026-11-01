@@ -102,19 +102,6 @@ def main():
                     dict(name="DuckDB by filename", c=AQUA, y=med("duckdb file", "rss_mib"), dy=14),
                     dict(name="qe --stdin", c=BLUE, y=med("qe pipe", "rss_mib"))],
                "piped input size", "peak RSS (MiB)", gb, ymax=400)
-    line_chart(f"{OUT}/stream-temp.svg", "Temp-file use vs piped input size",
-               "Line chart. DuckDB piped writes 237 MiB to 5.4 GiB of temp files as input grows; SenkoParse and DuckDB by filename write none.",
-               "Peak size of the engine's temp directory in MiB (max of 3 runs). Lower is better.",
-               xs, [dict(name="DuckDB piped", c=ORANGE, y=[round(max(r["temp_mib"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s), 0) for s, _ in sizes]),
-                    dict(name="qe --stdin, DuckDB by filename", c=BLUE, y=[0, 0, 0, 0], dy=-12)],
-               "piped input size", "peak temp use (MiB)", gb, ymax=6000)
-    line_chart(f"{OUT}/stream-wall.svg", "Wall time vs piped input size",
-               "Line chart. SenkoParse takes 0.55 to 4.8 seconds; DuckDB by filename 0.9 to 7; DuckDB piped 2 to 70 seconds.",
-               "Seconds, min of 3, 1 thread, Linux 4-core. At 3.7 GB: 4.78 s vs 69.8 s = 14.6x. One query.",
-               xs, [dict(name="DuckDB 2.0.0 piped", c=ORANGE, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb pipe" and r["size"] == s) for s, _ in sizes]),
-                    dict(name="DuckDB 2.0.0 file", c=AQUA, y=[min(r["wall_s"] for r in raw if r["engine"] == "duckdb file" and r["size"] == s) for s, _ in sizes], dy=-24),
-                    dict(name="qe --stdin", c=BLUE, y=[min(r["wall_s"] for r in raw if r["engine"] == "qe pipe" and r["size"] == s) for s, _ in sizes], dy=2)],
-               "piped input size", "wall time (s)", gb, ymax=80)
     mac = [json.loads(l) for l in open(f"{ROOT}/docs/experiments/data/exp005-mac-m3pro-raw.jsonl")]
     mw = lambda e: [min(r["wall_s"] for r in mac if r["engine"] == e and r["size"] == s) for s, _ in sizes]
     line_chart(f"{OUT}/stream-wall-mac.svg", "Wall time vs piped input size, M3 Pro",

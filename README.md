@@ -31,16 +31,7 @@ DuckDB issue #25165 (open; retitled since: the reporter now says a pipe retains 
 
 <sub>3 runs per cell, 4-core Xeon container, both engines on 1 thread. RSS includes a 12.4 MiB measurement floor. The data is **our reconstruction** of the issue's shape, not the issue's own script. The output rows of all three engines are identical at every size.</sub>
 
-<table>
-<tr>
-<td width="50%"><img src="docs/img/stream-temp.svg" alt="Temp-file use versus piped input size"></td>
-<td width="50%"><img src="docs/img/stream-wall.svg" alt="Wall time versus piped input size, recorded Linux run with DuckDB 2.0.0"></td>
-</tr>
-<tr>
-<td width="50%"><img src="docs/img/stream-wall-mac.svg" alt="Wall time on an Apple M3 Pro with DuckDB 2.0.0"></td>
-<td width="50%"></td>
-</tr>
-</table>
+<img src="docs/img/stream-wall-mac.svg" alt="Wall time versus piped input size on an Apple M3 Pro with DuckDB 2.0.0" width="720">
 
 <sub>Wall time is not a general speed claim. Recorded run (DuckDB 2.0.0, Linux 4-core): piped at 10x, 4.78 s vs 69.8 s, i.e. **14.6x** on this one query, because DuckDB 2.0.0 spills the pipe to temp files; vs DuckDB by filename it is 1.5x. Re-run of the whole harness on an Apple M3 Pro (DuckDB 2.0.0, same data, byte-identical output digests): memory and temp results reproduce (SenkoParse 48 MiB, DuckDB piped about 340 MiB and 5.2 GiB temp at 10x), but the wall-time ratio is smaller, **6.0x at 10x** (2.50 s vs 14.96 s; DuckDB piped varied 15–23 s). Treat the 14.6x as specific to the Linux container. Details: [BENCHMARKS.md](BENCHMARKS.md).</sub>
 
@@ -257,6 +248,7 @@ docs/         architecture, performance, testing, status, ADRs, experiments
 | [docs/performance.md](docs/performance.md) | for the tuning techniques and what they bought |
 | [docs/testing.md](docs/testing.md) | for what each test proves and how it was falsified |
 | [docs/status.md](docs/status.md) | for every claim, its evidence and what is open |
+| [docs/roadmap.md](docs/roadmap.md) | for future work, with targets and the results that would disprove each idea |
 | [docs/adr/](docs/adr/) | for decisions: [0001 parallel and fast paths](docs/adr/0001-parallel-and-fast-path-execution.md), [0002 stream-first](docs/adr/0002-stream-first-direction.md) |
 | [docs/experiments/](docs/experiments/) | for raw hypotheses, numbers and decisions |
 | [BENCHMARKS.md](BENCHMARKS.md) | for every benchmark table |
