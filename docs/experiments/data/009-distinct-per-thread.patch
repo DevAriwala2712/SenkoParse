@@ -1,0 +1,216 @@
+diff --git a/crates/engine/src/exec/hash_agg.rs b/crates/engine/src/exec/hash_agg.rs
+index 2420677..ac96741 100644
+--- a/crates/engine/src/exec/hash_agg.rs
++++ b/crates/engine/src/exec/hash_agg.rs
+@@ -11,7 +11,7 @@ use crate::storage::csv::BATCH_ROWS;
+ use crate::types::*;
+ use crate::Result;
+ use rayon::prelude::*;
+-use std::sync::Arc;
++use std::sync::{Arc, Mutex};
+ 
+ enum Mm {
+     None,
+@@ -499,6 +499,51 @@ impl AggTable {
+         }
+     }
+ 
++    /// This table's group for group `g` of `from` (a table with the same keys), if it has one.
++    fn find_group(&self, from: &AggTable, g: usize, buf: &mut Vec<u8>) -> Option<usize> {
++        let t = if self.int_mode {
++            if Some(g as u32) == from.null_gid {
++                self.null_gid
++            } else {
++                self.imap.find(from.ikeys[g], &self.ikeys)
++            }
++        } else {
++            buf.clear();
++            for c in &from.key_out {
++                c.encode_key(g, buf);
++            }
++            self.map.get(&buf[..]).copied()
++        };
++        t.map(|t| t as usize)
++    }
++
++    /// Re-insert the DISTINCT aggregates held by the worker tables of `ds` (see `DistinctSide`): returns a table
++    /// over the full spec whose DISTINCT states are `Count(size of the union over all workers)`, the value
++    /// `finish` gives for a DISTINCT set. Groups and the other states keep this table's order and values.
++    fn with_distinct(mut self, ds: &DistinctSide) -> AggTable {
++        let nc = self.spec.aggs.len();
++        let counts: Vec<Vec<i64>> = {
++            let me = &self;
++            (0..me.ngroups)
++                .into_par_iter()
++                .map_init(Vec::new, |buf, g| (0..ds.ndistinct).map(|d| ds.union_len(me, g, d, buf)).collect())
++                .collect()
++        };
++        let mut own = std::mem::take(&mut self.states).into_iter().map(Some).collect::<Vec<_>>();
++        let mut states = Vec::with_capacity(self.ngroups * ds.full.aggs.len());
++        for (g, cnt) in counts.iter().enumerate() {
++            for slot in &ds.slots {
++                states.push(match *slot {
++                    Ok(i) => own[g * nc + i].take().unwrap(),
++                    Err(d) => St::Count(cnt[d]),
++                });
++            }
++        }
++        self.states = states;
++        self.spec = ds.full.clone();
++        self
++    }
++
+     /// Final output columns (keys first, then aggregates) and the group count.
+     pub fn finish(mut self) -> Result<(Vec<Column>, usize)> {
+         let na = self.spec.aggs.len();
+@@ -518,6 +563,50 @@ impl AggTable {
+     }
+ }
+ 
++/// COUNT(DISTINCT) on the parallel path (EXP-009, ADR-0004). A set union is exact and its result does not depend
++/// on how rows are split or in which order sets are merged, so DISTINCT states need not follow the fixed per-chunk
++/// merge order that keeps `f64` sums thread-independent. Per-chunk tables carry every other aggregate; DISTINCT
++/// states live in a few worker tables (same keys, DISTINCT aggregates only), one per concurrently running chunk
++/// task, so live sets are `workers x groups` instead of `chunks x groups` and there is no tree of set unions.
++/// At the end each final group's count is the size of the union of that group's sets over all workers.
++struct DistinctSide {
++    full: Arc<AggSpec>,
++    /// Per aggregate of `full`: `Ok(i)` = index in the per-chunk spec, `Err(d)` = index in the worker spec.
++    slots: Vec<std::result::Result<usize, usize>>,
++    ndistinct: usize,
++    workers: Vec<AggTable>,
++}
++
++impl DistinctSide {
++    /// Size of the union, over all workers, of DISTINCT aggregate `d`'s set for group `g` of `from`.
++    fn union_len(&self, from: &AggTable, g: usize, d: usize, buf: &mut Vec<u8>) -> i64 {
++        let sets: Vec<&FxSet<Box<[u8]>>> = self
++            .workers
++            .iter()
++            .filter_map(|w| {
++                let wg = w.find_group(from, g, buf)?;
++                match &w.states[wg * self.ndistinct + d] {
++                    St::Distinct(s) => Some(&**s),
++                    _ => unreachable!("worker table holds DISTINCT states only"),
++                }
++            })
++            .collect();
++        let Some(big) = (0..sets.len()).max_by_key(|&i| sets[i].len()) else { return 0 };
++        // Keys missing from the largest set, each counted once; borrowed, so nothing is copied.
++        let mut extra: FxSet<&[u8]> = FxSet::default();
++        for (i, s) in sets.iter().enumerate() {
++            if i != big {
++                for k in s.iter() {
++                    if !sets[big].contains(k) {
++                        extra.insert(&k[..]);
++                    }
++                }
++            }
++        }
++        (sets[big].len() + extra.len()) as i64
++    }
++}
++
+ /// Where a `HashAgg` gets its input: one serial operator, or independent per-chunk pipelines.
+ pub enum AggInput {
+     Serial(Box<dyn Op>),
+@@ -540,7 +629,12 @@ struct Segments {
+ 
+ /// Merge per-chunk tables by key partition: each partition is folded by one task, walking the tables in chunk
+ /// order, so there is no serial tail and the result does not depend on the thread count.
+-fn partitioned_merge(ctx: &ExecCtx, spec: &Arc<AggSpec>, tables: Vec<AggTable>) -> Result<Vec<(Vec<Column>, usize)>> {
++fn partitioned_merge(
++    ctx: &ExecCtx,
++    spec: &Arc<AggSpec>,
++    tables: Vec<AggTable>,
++    ds: Option<&DistinctSide>,
++) -> Result<Vec<(Vec<Column>, usize)>> {
+     ctx.run(|| {
+         let aggs: &[AggCall] = &spec.aggs;
+         let buckets: Vec<Vec<Vec<u32>>> = tables.par_iter().map(|t| t.int_buckets()).collect();
+@@ -553,7 +647,10 @@ fn partitioned_merge(ctx: &ExecCtx, spec: &Arc<AggSpec>, tables: Vec<AggTable>)
+                         part.merge_one_int(t, og as usize, aggs);
+                     }
+                 }
+-                part.finish()
++                match ds {
++                    Some(ds) => part.with_distinct(ds).finish(),
++                    None => part.finish(),
++                }
+             })
+             .collect::<Result<Vec<_>>>()
+     })
+@@ -574,7 +671,25 @@ impl HashAgg {
+                 t
+             }
+             AggInput::Parallel(ctx, ch) => {
+-                let spec = self.spec.clone();
++                // DISTINCT aggregates go to per-worker tables (see `DistinctSide`); the rest stay per chunk.
++                let full = self.spec.clone();
++                let (spec, dspec, slots) = if full.aggs.iter().any(|a| a.distinct) {
++                    let (mut ca, mut da, mut slots) = (Vec::new(), Vec::new(), Vec::new());
++                    for a in &full.aggs {
++                        if a.distinct {
++                            slots.push(Err(da.len()));
++                            da.push(a.clone());
++                        } else {
++                            slots.push(Ok(ca.len()));
++                            ca.push(a.clone());
++                        }
++                    }
++                    let keys = full.keys.clone();
++                    (Arc::new(AggSpec { keys: keys.clone(), aggs: ca }), Some(Arc::new(AggSpec { keys, aggs: da })), slots)
++                } else {
++                    (full.clone(), None, Vec::new())
++                };
++                let pool: Mutex<Vec<AggTable>> = Mutex::new(Vec::new());
+                 // One partial table per chunk, collected in chunk order.
+                 let mut tables: Vec<AggTable> = ctx.run(|| {
+                     (0..ch.n)
+@@ -582,16 +697,32 @@ impl HashAgg {
+                         .map(|i| {
+                             let mut op = (ch.make)(i)?;
+                             let mut t = AggTable::new(spec.clone());
++                            // Which worker table a chunk lands in varies run to run; a union does not care.
++                            let mut w = dspec
++                                .as_ref()
++                                .map(|d| pool.lock().unwrap().pop().unwrap_or_else(|| AggTable::new(d.clone())));
+                             while let Some(b) = op.next()? {
+                                 t.consume(&b)?;
++                                if let Some(w) = &mut w {
++                                    w.consume(&b)?;
++                                }
++                            }
++                            if let Some(w) = w {
++                                pool.lock().unwrap().push(w);
+                             }
+                             Ok(t)
+                         })
+                         .collect::<Result<Vec<_>>>()
+                 })?;
++                let ds = dspec.map(|d| DistinctSide {
++                    full: full.clone(),
++                    slots,
++                    ndistinct: d.aggs.len(),
++                    workers: pool.into_inner().unwrap(),
++                });
+                 let total: usize = tables.iter().map(|t| t.ngroups).sum();
+                 if tables.len() > 1 && tables[0].int_mode && total > ctx.agg_partition_groups {
+-                    let segs = partitioned_merge(&ctx, &spec, tables)?;
++                    let segs = partitioned_merge(&ctx, &spec, tables, ds.as_ref())?;
+                     self.out = Some(Segments { segs, seg: 0, pos: 0 });
+                     return Ok(());
+                 }
+@@ -622,7 +753,11 @@ impl HashAgg {
+                         tables.extend(odd);
+                     }
+                 });
+-                tables.pop().unwrap_or_else(|| AggTable::new(self.spec.clone()))
++                let t = tables.pop().unwrap_or_else(|| AggTable::new(spec.clone()));
++                match &ds {
++                    Some(ds) => ctx.run(|| t.with_distinct(ds)),
++                    None => t,
++                }
+             }
+         };
+         let (cols, n) = table.finish()?;

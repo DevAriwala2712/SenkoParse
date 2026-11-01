@@ -263,6 +263,71 @@ fn table_reuse_gives_identical_results_for_1_2_and_4_threads() {
     }
 }
 
+/// EXP-009 / ADR-0004: COUNT(DISTINCT) sets live in per-worker tables (one per concurrently running chunk task) and
+/// are unioned at the end, while every other aggregate keeps the fixed per-chunk merge order. With about a thousand
+/// chunks and 1, 2 or 4 threads the rows reach the worker tables in a different split each run, so a wrong union, a
+/// lost worker table or DISTINCT states landing in the wrong output column would change a count. Results, including
+/// `f64` sums in the same query and the order of unordered groups, must be bit-identical for 1, 2 and 4 threads on the
+/// tree merge and the forced partitioned merge, and equal (as multisets) to the serial `--no-opt` path.
+#[test]
+fn distinct_per_worker_gives_identical_results_for_1_2_and_4_threads() {
+    let mut x: u64 = 0x2545_F491_4F6C_DD1D;
+    let mut csv = String::from("k,s,d,ds,v\n");
+    let sch = "[t]\nk = \"i64\"\ns = \"str\"\nd = \"i64\"\nds = \"str\"\nv = \"f64\"\n";
+    for _ in 0..40000 {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        let k = if x % 17 == 0 { String::new() } else { (x % 1201).to_string() }; // ~1200 int groups + NULL group
+        let s = if (x >> 8) % 13 == 0 { String::new() } else { format!("g{}", (x >> 12) % 23) }; // 23 str groups + NULL
+        let d = if (x >> 16) % 9 == 0 { String::new() } else { (((x >> 20) % 5000) as i64 - 2500).to_string() }; // NULLs, negatives
+        let ds = if (x >> 24) % 7 == 0 { String::new() } else { format!("v{}", (x >> 28) % 3000) };
+        let v = ((x % 2_000_001) as f64 - 1_000_000.0) * 10f64.powi((x >> 40) as i32 % 9 - 4);
+        csv.push_str(&format!("{k},{s},{d},{ds},{v}\n"));
+    }
+    let d = dir("distinct-worker", &csv, sch);
+    let queries = [
+        // DISTINCT between float aggregates: output columns must come back in query order
+        "SELECT s, SUM(v), COUNT(DISTINCT d), AVG(v), COUNT(DISTINCT ds), MIN(v) FROM t GROUP BY s",
+        "SELECT k, COUNT(DISTINCT d), SUM(v), COUNT(*) FROM t GROUP BY k",
+        "SELECT s, k, COUNT(DISTINCT ds), SUM(v) FROM t GROUP BY s, k",
+        "SELECT COUNT(DISTINCT d), SUM(v), COUNT(DISTINCT ds), COUNT(DISTINCT k) FROM t", // global
+        "SELECT s, COUNT(DISTINCT d), COUNT(DISTINCT k) FROM t GROUP BY s",               // DISTINCT only
+        "SELECT k, COUNT(DISTINCT v) FROM t GROUP BY k",                                  // DISTINCT over f64
+    ];
+    let forced = |threads: usize| Options {
+        threads: Some(threads),
+        chunk_bytes: Some(600),
+        agg_partition_groups: Some(0),
+        ..Default::default()
+    };
+    let canon = |mut r: Vec<Vec<Value>>| {
+        r.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+        r
+    };
+    // Drop the float aggregates' columns (SUM/AVG/MIN of v) so the rest can be compared with the serial path exactly.
+    let exact_cols = |q: &str, r: Vec<Vec<Value>>| -> Vec<Vec<Value>> {
+        let sel = q.split(" FROM ").next().unwrap().trim_start_matches("SELECT ");
+        let keep: Vec<bool> = sel.split(", ").map(|c| !c.contains("(v)")).collect();
+        r.into_iter().map(|row| row.into_iter().zip(&keep).filter(|(_, k)| **k).map(|(v, _)| v).collect()).collect()
+    };
+    for q in queries {
+        let base = run(&d, q, opts(1, 600)).unwrap();
+        let base_forced = run(&d, q, forced(1)).unwrap();
+        for threads in [2, 4] {
+            assert_eq!(run(&d, q, opts(threads, 600)).unwrap(), base, "tree merge, threads={threads}: {q}");
+            assert_eq!(run(&d, q, forced(threads)).unwrap(), base_forced, "partitioned merge, threads={threads}: {q}");
+        }
+        let reference = canon(exact_cols(q, run(&d, q, Options { no_opt: true, ..Default::default() }).unwrap()));
+        for threads in [1, 2, 4] {
+            for (name, o) in [("tree", opts(threads, 600)), ("partitioned", forced(threads))] {
+                let got = canon(exact_cols(q, run(&d, q, o).unwrap()));
+                assert_eq!(got, reference, "{name} merge, threads={threads} vs --no-opt: {q}");
+            }
+        }
+    }
+}
+
 /// EXP-008: the integer-key join builds its table in parallel (64 hash partitions once the build side has 65,536 rows
 /// or more). Results, the row order of unordered output, and `f64` sums must be bit-identical for 1, 2 and 4 threads,
 /// with duplicate build keys, NULL keys, negative and sparse keys, inner and LEFT joins; and equal to the serial
