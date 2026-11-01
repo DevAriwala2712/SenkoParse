@@ -11,7 +11,7 @@
 //! Errors: any error from this path is re-derived by running the single-threaded reference path, so error
 //! text (row numbers etc.) is identical to `--no-opt`.
 use super::hash_agg::{AggInput, HashAgg};
-use super::hash_join::{build_table, HashJoin, ProbeOp};
+use super::hash_join::{build_int_table, build_table, int_join_eligible, HashJoin, ProbeOp};
 use super::ops::{Filter, Limit, Project, Scan, Sort};
 use super::Op;
 use crate::plan::{JoinType, Node, Plan};
@@ -109,7 +109,11 @@ pub fn chunked(plan: &Plan, ctx: &Arc<ExecCtx>) -> Result<Option<Chunked>> {
             // The build side is drained once, up front (its own scan is parallel); the table is then shared.
             let mut bop = build_par(build_plan, ctx)?;
             let types: Vec<Ty> = build_plan.schema.iter().map(|f| f.ty).collect();
-            let built = Arc::new(build_table(&mut *bop, bkeys, &types)?);
+            let built = Arc::new(if int_join_eligible(bkeys, pkeys) {
+                build_int_table(&mut *bop, bkeys, &types, ctx)?
+            } else {
+                build_table(&mut *bop, bkeys, &types)?
+            });
             let (pk, bl, lj, inner) = (pkeys.clone(), *build_left, *kind == JoinType::Left, probe.make);
             let make: MakeFn = Arc::new(move |i| {
                 Ok(Box::new(ProbeOp {
