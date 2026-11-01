@@ -1,0 +1,203 @@
+diff --git a/crates/engine/src/exec/hash.rs b/crates/engine/src/exec/hash.rs
+index 961a3f8..cb2a2a3 100644
+--- a/crates/engine/src/exec/hash.rs
++++ b/crates/engine/src/exec/hash.rs
+@@ -62,6 +62,18 @@ impl Default for IntMap {
+ }
+ 
+ impl IntMap {
++    /// A map with no slots at all, for compact partials that are never searched. It must be replaced
++    /// (`IntMap::default()` and re-inserted) before `find`/`insert` are used.
++    pub fn unindexed() -> IntMap {
++        IntMap { slots: Vec::new(), shift: 64, count: 0 }
++    }
++
++    /// Forget every entry but keep the slot memory (EXP-007: a worker reuses one table across chunks).
++    pub fn clear(&mut self) {
++        self.slots.fill(0);
++        self.count = 0;
++    }
++
+     #[inline]
+     fn index(&self, k: i64) -> usize {
+         // multiplicative hash; the top bits are the well-mixed ones
+diff --git a/crates/engine/src/exec/hash_agg.rs b/crates/engine/src/exec/hash_agg.rs
+index 2420677..354d1af 100644
+--- a/crates/engine/src/exec/hash_agg.rs
++++ b/crates/engine/src/exec/hash_agg.rs
+@@ -278,6 +278,11 @@ pub struct AggTable {
+     buf: Vec<u8>,
+     buf2: Vec<u8>,
+     gids: Vec<u32>,
++    /// Compact partial made by `take_partial`: the hash index (`imap` / `map`) is not built. `merge` rebuilds it
++    /// (`ensure_index`) only if this table is the merge target; as a merge source it is never needed.
++    compact: bool,
++    /// Non-int-mode compact partial: group keys with their group ids, sorted by id (first-seen order).
++    ents: Option<Vec<(Box<[u8]>, u32)>>,
+ }
+ 
+ impl AggTable {
+@@ -297,6 +302,74 @@ impl AggTable {
+             buf: Vec::with_capacity(64),
+             buf2: Vec::with_capacity(64),
+             gids: Vec::new(),
++            compact: false,
++            ents: None,
++        }
++    }
++
++    /// Forget all groups but keep every allocation (hash index, key and state vectors) for the next chunk.
++    fn reset(&mut self) {
++        self.map.clear();
++        self.imap.clear();
++        self.ikeys.clear();
++        self.null_gid = None;
++        for c in &mut self.key_out {
++            c.clear();
++        }
++        self.states.clear();
++        self.ngroups = 0;
++        self.gids.clear();
++        self.compact = false;
++        self.ents = None;
++    }
++
++    /// EXP-007. Move the groups seen so far into a compact partial (exact-capacity keys and accumulators, no
++    /// hash index) and reset `self` without freeing its memory, so one worker table serves many chunks.
++    /// The partial keeps the groups in first-seen order, which is what `merge` and `partitioned_merge` rely
++    /// on; nothing about the merge order or arithmetic changes, so float results are unchanged.
++    pub fn take_partial(&mut self) -> AggTable {
++        let ents = if self.int_mode {
++            None
++        } else {
++            let mut e: Vec<(Box<[u8]>, u32)> = self.map.drain().collect();
++            e.sort_unstable_by_key(|e| e.1);
++            Some(e)
++        };
++        let p = AggTable {
++            spec: self.spec.clone(),
++            map: FxMap::default(),
++            int_mode: self.int_mode,
++            imap: IntMap::unindexed(),
++            ikeys: self.ikeys.clone(),
++            null_gid: self.null_gid,
++            key_out: self.key_out.clone(),
++            states: self.states.drain(..).collect(),
++            ngroups: self.ngroups,
++            buf: Vec::new(),
++            buf2: Vec::new(),
++            gids: Vec::new(),
++            compact: true,
++            ents,
++        };
++        self.reset();
++        p
++    }
++
++    /// Rebuild the hash index of a compact partial that is about to receive groups from another table.
++    fn ensure_index(&mut self) {
++        if !self.compact {
++            return;
++        }
++        self.compact = false;
++        if self.int_mode {
++            self.imap = IntMap::default();
++            for g in 0..self.ngroups {
++                if Some(g as u32) != self.null_gid {
++                    self.imap.insert(g as u32, &self.ikeys);
++                }
++            }
++        } else if let Some(e) = self.ents.take() {
++            self.map = e.into_iter().collect();
+         }
+     }
+ 
+@@ -386,6 +459,7 @@ impl AggTable {
+     /// Fold `other` (a later chunk) into `self`. Groups first seen in `other` are appended in `other`'s
+     /// own first-seen order, so the merged group order equals the order a serial scan would produce.
+     pub fn merge(&mut self, other: AggTable) {
++        self.ensure_index();
+         let spec = self.spec.clone();
+         let na = spec.aggs.len();
+         if self.int_mode {
+@@ -423,8 +497,14 @@ impl AggTable {
+             }
+             return;
+         }
+-        let mut ents: Vec<(Box<[u8]>, u32)> = other.map.into_iter().collect();
+-        ents.sort_unstable_by_key(|e| e.1);
++        let ents: Vec<(Box<[u8]>, u32)> = match other.ents {
++            Some(e) => e, // compact partial: already sorted by group id
++            None => {
++                let mut e: Vec<_> = other.map.into_iter().collect();
++                e.sort_unstable_by_key(|e| e.1);
++                e
++            }
++        };
+         let mut ostates = other.states;
+         for (key, og) in ents {
+             let og = og as usize;
+@@ -575,18 +655,28 @@ impl HashAgg {
+             }
+             AggInput::Parallel(ctx, ch) => {
+                 let spec = self.spec.clone();
+-                // One partial table per chunk, collected in chunk order.
++                // One compact partial per chunk, collected in chunk order. Each rayon task keeps one working
++                // table and reuses it for the chunks it processes (EXP-007); `map_init` calls the init closure
++                // once per task, not once per chunk, and the partials still come out in chunk order.
+                 let mut tables: Vec<AggTable> = ctx.run(|| {
+                     (0..ch.n)
+                         .into_par_iter()
+-                        .map(|i| {
+-                            let mut op = (ch.make)(i)?;
+-                            let mut t = AggTable::new(spec.clone());
+-                            while let Some(b) = op.next()? {
+-                                t.consume(&b)?;
+-                            }
+-                            Ok(t)
+-                        })
++                        .map_init(
++                            || AggTable::new(spec.clone()),
++                            |t, i| {
++                                let r = (|| {
++                                    let mut op = (ch.make)(i)?;
++                                    while let Some(b) = op.next()? {
++                                        t.consume(&b)?;
++                                    }
++                                    Ok(t.take_partial())
++                                })();
++                                if r.is_err() {
++                                    t.reset(); // a half-filled table must not leak into the next chunk
++                                }
++                                r
++                            },
++                        )
+                         .collect::<Result<Vec<_>>>()
+                 })?;
+                 let total: usize = tables.iter().map(|t| t.ngroups).sum();
+diff --git a/crates/engine/src/types/mod.rs b/crates/engine/src/types/mod.rs
+index 0d56d47..fa62643 100644
+--- a/crates/engine/src/types/mod.rs
++++ b/crates/engine/src/types/mod.rs
+@@ -253,6 +253,21 @@ impl Column {
+         Column { data, nulls: None }
+     }
+ 
++    /// Remove every row but keep the allocated capacity (the column is then equal to `Column::empty(ty)`).
++    pub fn clear(&mut self) {
++        match &mut self.data {
++            ColData::Bool(v) => v.clear(),
++            ColData::I64(v) | ColData::Dec(v, _) => v.clear(),
++            ColData::F64(v) => v.clear(),
++            ColData::Date(v) => v.clear(),
++            ColData::Str(s) => {
++                s.offs.truncate(1);
++                s.data.clear();
++            }
++        }
++        self.nulls = None;
++    }
++
+     pub fn ty(&self) -> Ty {
+         match &self.data {
+             ColData::Bool(_) => Ty::Bool,

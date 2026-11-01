@@ -201,3 +201,64 @@ fn partitioned_merge_matches_reference_and_is_thread_independent() {
         }
     }
 }
+
+/// EXP-007: each worker reuses one aggregation table across many chunks. With hundreds of chunks and 1, 2 or 4
+/// workers, the chunks-per-worker split differs wildly, so any state left over from a previous chunk (stale keys,
+/// NULL group, hash index, DISTINCT sets) or any order-dependence would show up. Results, including float sums
+/// and the order of unordered groups, must be bit-identical for 1, 2 and 4 threads, on the pairwise-tree merge
+/// and on the forced partitioned merge; exact (integer) aggregates must also equal the single-chunk result.
+#[test]
+fn table_reuse_gives_identical_results_for_1_2_and_4_threads() {
+    let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
+    let mut csv = String::from("k,s,w,v,n\n");
+    let sch = "[t]\nk = \"i64\"\ns = \"str\"\nw = \"i64\"\nv = \"f64\"\nn = \"i64\"\n";
+    for _ in 0..40000 {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        let k = if x % 11 == 0 { String::new() } else { (x % 3001).to_string() }; // ~3000 int groups + NULL group
+        let s = if (x >> 8) % 13 == 0 { String::new() } else { format!("g{}", (x >> 12) % 29) }; // 29 str groups + NULL
+        let w = (x >> 20) % 7;
+        let v = ((x % 2_000_001) as f64 - 1_000_000.0) * 10f64.powi((x >> 40) as i32 % 9 - 4);
+        let n = (x >> 30) % 1000;
+        csv.push_str(&format!("{k},{s},{w},{v},{n}\n"));
+    }
+    let d = dir("reuse", &csv, sch);
+    let float_queries = [
+        "SELECT k, COUNT(*), SUM(v), AVG(v), MIN(v), MAX(v) FROM t GROUP BY k", // int key, unordered
+        "SELECT s, SUM(v), AVG(v) FROM t GROUP BY s",                           // string key, unordered
+        "SELECT s, w, SUM(v), COUNT(DISTINCT k) FROM t GROUP BY s, w",          // composite key + DISTINCT
+        "SELECT SUM(v), AVG(v), COUNT(*) FROM t",                               // global aggregate
+    ];
+    let exact_queries = [
+        "SELECT k, COUNT(*), SUM(n), MIN(s), MAX(s), COUNT(DISTINCT w) FROM t GROUP BY k",
+        "SELECT s, COUNT(*), SUM(n), COUNT(DISTINCT k) FROM t GROUP BY s",
+        "SELECT w, COUNT(*), SUM(n) FROM t GROUP BY w",
+    ];
+    let forced = |threads: usize| Options {
+        threads: Some(threads),
+        chunk_bytes: Some(600),
+        agg_partition_groups: Some(0),
+        ..Default::default()
+    };
+    for q in float_queries.iter().chain(exact_queries.iter()) {
+        let base = run(&d, q, opts(1, 600)).unwrap();
+        let base_forced = run(&d, q, forced(1)).unwrap();
+        for threads in [2, 4] {
+            assert_eq!(run(&d, q, opts(threads, 600)).unwrap(), base, "tree merge, threads={threads}: {q}");
+            assert_eq!(run(&d, q, forced(threads)).unwrap(), base_forced, "partitioned merge, threads={threads}: {q}");
+        }
+    }
+    let canon = |mut r: Vec<Vec<Value>>| {
+        r.sort_by(|a, b| format!("{a:?}").cmp(&format!("{b:?}")));
+        r
+    };
+    for q in exact_queries {
+        let one_chunk = canon(run(&d, q, opts(1, 100_000_000)).unwrap());
+        let reference = canon(run(&d, q, Options { no_opt: true, ..Default::default() }).unwrap());
+        assert_eq!(one_chunk, reference, "{q}");
+        for threads in [1, 2, 4] {
+            assert_eq!(canon(run(&d, q, opts(threads, 600)).unwrap()), reference, "threads={threads} vs reference: {q}");
+        }
+    }
+}
