@@ -430,6 +430,16 @@ impl CsvReader {
     }
 
     pub fn next_batch(&mut self) -> Result<Option<crate::types::Batch>> {
+        let p0 = self.pos;
+        let r = self.next_batch_inner();
+        if let Ok(Some(b)) = &r {
+            // Two relaxed adds per batch (not per row); feeds the live progress display only.
+            crate::progress::add_scan(self.pos - p0, b.len);
+        }
+        r
+    }
+
+    fn next_batch_inner(&mut self) -> Result<Option<crate::types::Batch>> {
         if self.quote_free {
             return self.next_batch_quote_free();
         }

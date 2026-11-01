@@ -73,7 +73,9 @@ textarea#sql{width:100%;height:100%;background:transparent;color:transparent;car
 .errbox{padding:18px}.errbox h3{margin:0 0 6px;color:var(--err);font-size:14px}.errbox pre{font:12px/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;overflow:auto;margin:8px 0;white-space:pre-wrap}
 .runbox{padding:28px;display:flex;flex-direction:column;gap:10px}.bar{height:4px;background:var(--line);border-radius:4px;overflow:hidden;position:relative}.bar i{position:absolute;top:0;bottom:0;width:30%;background:var(--acc);border-radius:4px;animation:slide 1.1s infinite ease-in-out}
 @keyframes slide{0%{left:-30%}100%{left:100%}}
-.big{font:600 22px var(--mono)}.sub{color:var(--mut)}
+.big{font:600 22px var(--mono)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.tile{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--panel2)}.tile small{display:block;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.tile b{font:600 17px var(--mono)}
+.done{border-color:var(--ok);color:var(--ok);font-weight:600}.sub{color:var(--mut)}
 .vp{flex:1;overflow:auto;position:relative;min-height:0}
 .grow{display:flex;position:absolute;left:0;right:0}
 .vp .hdr{position:sticky;top:0;z-index:5;display:flex;background:var(--panel2);border-bottom:1px solid var(--line);width:max-content;min-width:100%}
@@ -170,6 +172,8 @@ const el=(t,txt,cls)=>{const e=document.createElement(t);if(txt!==undefined&&txt
 const LS={get(k,d){try{const v=localStorage.getItem('sp.'+k);return v===null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('sp.'+k,JSON.stringify(v))}catch(e){}}};
 const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmtB=n=>{if(n==null)return'?';const u=['B','KiB','MiB','GiB','TiB'];let i=0,x=n;while(x>=1024&&i<4){x/=1024;i++}return(i?x.toFixed(x<10?2:1):x)+' '+u[i]};
+const fmtMB=n=>n==null?'?':(n>=1e9?(n/1e9).toFixed(2)+' GB':(n/1e6).toFixed(n<1e7?2:1)+' MB');
+const fmtRate=r=>r>=1000?(r/1000).toFixed(2)+' GB/s':r.toFixed(r<10?2:0)+' MB/s';
 const fmtT=s=>s<1?(s*1000).toFixed(s<.01?1:0)+' ms':s.toFixed(s<10?2:1)+' s';
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1600)}
 
@@ -341,9 +345,15 @@ document.addEventListener('click',()=>$('exPop').hidden=true);
 /* ---------- running ---------- */
 let pollT=0;
 function setConn(state,txt){const d=$('dot');d.className='dot '+state;$('connTxt').textContent=txt}
+let live=null;
+function setTile(id,v){const e=$(id);if(e)e.textContent=v}
 async function poll(){try{const r=await fetch('/api/progress');const p=await r.json();
-  if(p.running){setConn('run','running');const b=$('liveBox');if(b){b.querySelector('.big').textContent=fmtT(p.elapsed);
-    b.querySelector('.sub').textContent='RSS '+fmtB(p.rss)+' (peak '+fmtB(p.peak_rss)+') · '+p.rows_out.toLocaleString()+' result rows so far'}}
+  if(p.running){setConn('run','running');
+    const now=performance.now();let rate=live&&live.rate||0;
+    if(live&&now-live.t>=100){const inst=(p.scan_bytes-live.b)/1e6/((now-live.t)/1000);rate=live.rate?live.rate*0.5+inst*0.5:inst;live={t:now,b:p.scan_bytes,rate}}
+    else if(!live)live={t:now,b:p.scan_bytes,rate:0};
+    const lb=document.querySelector('#liveBox .sub');if(lb)lb.textContent=p.scan_rows===0?'Preparing scan \u2014 no rows read yet\u2026':'Scanning\u2026';setTile('lvEl',fmtT(p.elapsed));setTile('lvRows',p.scan_rows.toLocaleString());setTile('lvMB',fmtMB(p.scan_bytes));setTile('lvRate',fmtRate(rate));setTile('lvRss',fmtB(p.rss));setTile('lvPk',fmtB(p.peak_rss));
+    const sb=$('stat');if(sb&&busy)sb.textContent='Running '+fmtT(p.elapsed)+' \u00b7 '+p.scan_rows.toLocaleString()+' rows \u00b7 '+fmtMB(p.scan_bytes)+' \u00b7 '+fmtRate(rate)+' \u00b7 RSS '+fmtB(p.rss)+' (peak '+fmtB(p.peak_rss)+')'}
   else setConn('ok','connected')}catch(e){setConn('bad','disconnected')}}
 setInterval(()=>{if(!busy)poll()},4000);
 function lineCol(sql,off){const b=sql.slice(0,off);const ls=b.split('\n');return{line:ls.length,col:ls[ls.length-1].length+1}}
@@ -352,14 +362,14 @@ async function run(maxOverride){
   busy=true;$('bRun').disabled=true;t.sql=sql;saveTabs();acClose();errRange=null;paint();
   t.res={state:'run'};renderResult();
   const lead=sql.length-sql.trimStart().length;const max=maxOverride||prefs.max;
-  const iv=setInterval(poll,250);const t0=performance.now();let j;
+  live=null;const iv=setInterval(poll,150);const t0=performance.now();let j;
   try{const r=await fetch('/api/query?max='+max,{method:'POST',body:sql});j=await r.json()}
   catch(e){j={error:'request failed: '+e.message}}
   clearInterval(iv);busy=false;$('bRun').disabled=false;
   const wall=(performance.now()-t0)/1000;
   if(j.error){const m=/offset (\d+)/.exec(j.error);let loc=null;
     if(m){const off=+m[1]+lead;const w=/^[A-Za-z_]\w*|^\s*\S/.exec(sql.slice(off));loc={off,end:off+Math.max(1,w?w[0].length:1),...lineCol(sql,off)};errRange={s:loc.off,e:loc.end};paint()}
-    t.res={state:'err',msg:j.error,loc,sql};addHist(sql,{err:true,secs:j.secs||wall})}
+    t.res={state:'err',msg:j.error,loc,sql,secs:j.secs||wall};addHist(sql,{err:true,secs:j.secs||wall})}
   else{t.res={state:'ok',j,sql,sort:null,pins:new Set(),widths:null,wall};addHist(sql,{rows:j.total,secs:j.secs})}
   poll();if(t===cur())renderResult()}
 $('bRun').onclick=()=>run();
@@ -380,10 +390,12 @@ let RH=24;
 function renderResult(){const body=$('rbody'),bar=$('rbar'),stat=$('stat');body.replaceChildren();bar.replaceChildren();stat.replaceChildren();
   const r=cur().res;RH=prefs.den;body.style.setProperty('--rh',RH+'px');
   if(!r){emptyState(body);stat.append(el('span','Ready'));return}
-  if(r.state==='run'){const b=el('div','','runbox');b.id='liveBox';b.append(el('div','Running…','sub'),el('div','0 ms','big'),el('div','','bar'),el('div','waiting for first sample','sub'));b.querySelector('.bar').append(el('i'));body.append(b);stat.append(el('span','Executing'));return}
+  if(r.state==='run'){const b=el('div','','runbox');b.id='liveBox';b.append(el('div','Running\u2026','sub'));
+    const tl=el('div','','tiles');[['lvEl','Elapsed'],['lvRows','Rows processed'],['lvMB','Scanned'],['lvRate','Throughput'],['lvRss','RSS now'],['lvPk','Peak RSS']].forEach(([id,l])=>{const t=el('div','','tile');t.append(el('small',l),el('b','\u2014'));t.lastChild.id=id;tl.append(t)});
+    b.append(tl,el('div','','bar'));b.querySelector('.bar').append(el('i'));body.append(b);stat.id='stat';stat.append(el('span','Executing'));return}
   if(r.state==='err'){const b=el('div','','errbox');b.append(el('h3',r.loc?'Error at line '+r.loc.line+', column '+r.loc.col:'Error'),el('pre',r.msg));
     if(r.loc){const ln=r.sql.split('\n')[r.loc.line-1]||'';b.append(el('pre',ln+'\n'+' '.repeat(Math.max(0,r.loc.col-1))+'^'))}
-    body.append(b);stat.append(el('span','Failed'));return}
+    body.append(b);stat.append(el('span','Failed'+(r.secs!=null?' after '+fmtT(r.secs):'')));return}
   grid(body,bar,r);statusBar(stat,r)}
 function emptyState(body){const d=el('div','','empty');
   d.append(el('h3','Run a query'),el('p','Pick a table on the left, write SQL above, and press Cmd/Ctrl+Enter. The engine scans the CSV files directly: no import step, no database.'));
@@ -446,10 +458,12 @@ function exportData(r,kind){const j=r.j;const ord=r.order?r.order():j.rows.map((
 function download(name,type,text){const a=el('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function statusBar(stat,r){const j=r.j,s=j.stats||{};
   const item=(l,v,cls)=>{const sp=el('span','');sp.append(document.createTextNode(l+' '),el('b',v));if(cls)sp.className=cls;stat.append(sp)};
-  item('Rows',j.total.toLocaleString());item('Time',fmtT(j.secs));
+  stat.append(el('span','Completed in '+fmtT(j.secs),'pill done'));
+  item('Rows',j.total.toLocaleString());
   if(s.peak_rss)item('Peak RSS',fmtB(s.peak_rss));
-  if(s.table_bytes){item('Tables',fmtB(s.table_bytes)+' CSV');if(j.secs>0)item('Throughput',(s.table_bytes/j.secs/1e9).toFixed(2)+' GB/s over file size');
-    if(s.peak_rss&&s.table_bytes>=64*1048576){const ratio=s.peak_rss/s.table_bytes;const p=el('span','peak RSS = '+(ratio*100<1?'<1':(ratio*100).toFixed(ratio<.1?1:0))+'% of table size','pill'+(ratio<.5?' hi':''));p.title='Sampled every ~100 ms while the query ran; the process baseline before the query was '+fmtB(s.rss_start)+'.';stat.append(p)}}
+  if(s.scan_bytes!=null){item('Scanned',fmtMB(s.scan_bytes)+' ('+s.scan_rows.toLocaleString()+' rows)');if(j.secs>0)item('Avg throughput',fmtRate(s.scan_bytes/1e6/j.secs))}
+  if(s.table_bytes){item('Tables',fmtB(s.table_bytes)+' CSV');
+    if(s.peak_rss&&s.table_bytes>=64*1048576){const ratio=s.peak_rss/s.table_bytes;const p=el('span','peak RSS = '+(ratio*100<1?'<1':(ratio*100).toFixed(ratio<.1?1:0))+'% of table size','pill'+(ratio<.5?' hi':''));p.title='Sampled every ~100 ms while the query ran; the process baseline before the query was '+fmtB(s.rss_start)+'. In file mode RSS includes memory-mapped CSV pages the OS can reclaim, so it is not the engine heap alone.';stat.append(p)}}
   if(s.threads)item('Threads',String(s.threads))}
 
 /* ---------- toolbar, settings, shortcuts ---------- */

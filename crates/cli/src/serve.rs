@@ -33,6 +33,8 @@ static RUNNING: AtomicBool = AtomicBool::new(false);
 static CUR_RSS: AtomicU64 = AtomicU64::new(0);
 static PEAK_RSS: AtomicU64 = AtomicU64::new(0);
 static ROWS_BASE: AtomicU64 = AtomicU64::new(0);
+static SCAN_BYTES_BASE: AtomicU64 = AtomicU64::new(0);
+static SCAN_ROWS_BASE: AtomicU64 = AtomicU64::new(0);
 static STARTED: Mutex<Option<Instant>> = Mutex::new(None);
 
 /// Everything a request handler needs. `data` is switchable from the UI; each query reads it once at start.
@@ -195,6 +197,8 @@ fn run_query(srv: &Srv, sql: &str, max: usize) -> String {
     let _g = srv.gate.lock().unwrap_or_else(|e| e.into_inner());
     // Live counters for /api/progress. Result rows are counted as they are produced (baseline subtracted).
     ROWS_BASE.store(engine::progress::rows_out(), Relaxed);
+    SCAN_BYTES_BASE.store(engine::progress::scan_bytes(), Relaxed);
+    SCAN_ROWS_BASE.store(engine::progress::scan_rows(), Relaxed);
     PEAK_RSS.store(0, Relaxed);
     sample_rss();
     let rss_start = CUR_RSS.load(Relaxed);
@@ -225,9 +229,11 @@ fn run_query(srv: &Srv, sql: &str, max: usize) -> String {
             let numeric: Vec<&str> = sh.numeric.iter().map(|b| if *b { "true" } else { "false" }).collect();
             let rows: Vec<String> =
                 sh.rows.iter().map(|r| format!("[{}]", r.iter().map(|v| jstr(v)).collect::<Vec<_>>().join(","))).collect();
+            let scan_bytes = engine::progress::scan_bytes().saturating_sub(SCAN_BYTES_BASE.load(Relaxed));
+            let scan_rows = engine::progress::scan_rows().saturating_sub(SCAN_ROWS_BASE.load(Relaxed));
             let tl: Vec<String> = tables.iter().map(|t| jstr(t)).collect();
             format!(
-                r#"{{"names":[{}],"numeric":[{}],"rows":[{}],"total":{},"secs":{secs:.6},"stats":{{"rss_start":{rss_start},"peak_rss":{},"table_bytes":{bytes},"threads":{threads},"tables":[{}],"max":{max}}}}}"#,
+                r#"{{"names":[{}],"numeric":[{}],"rows":[{}],"total":{},"secs":{secs:.6},"stats":{{"rss_start":{rss_start},"peak_rss":{},"table_bytes":{bytes},"scan_bytes":{scan_bytes},"scan_rows":{scan_rows},"threads":{threads},"tables":[{}],"max":{max}}}}}"#,
                 names.join(","),
                 numeric.join(","),
                 rows.join(","),
@@ -258,9 +264,11 @@ fn progress_json() -> String {
     let elapsed = STARTED.lock().unwrap_or_else(|e| e.into_inner()).map_or(0.0, |t| t.elapsed().as_secs_f64());
     let rows = engine::progress::rows_out().saturating_sub(ROWS_BASE.load(Relaxed));
     format!(
-        r#"{{"running":{running},"elapsed":{elapsed:.3},"rss":{},"peak_rss":{},"rows_out":{rows}}}"#,
+        r#"{{"running":{running},"elapsed":{elapsed:.3},"rss":{},"peak_rss":{},"rows_out":{rows},"scan_bytes":{},"scan_rows":{}}}"#,
         CUR_RSS.load(Relaxed),
-        PEAK_RSS.load(Relaxed)
+        PEAK_RSS.load(Relaxed),
+        engine::progress::scan_bytes().saturating_sub(SCAN_BYTES_BASE.load(Relaxed)),
+        engine::progress::scan_rows().saturating_sub(SCAN_ROWS_BASE.load(Relaxed))
     )
 }
 
