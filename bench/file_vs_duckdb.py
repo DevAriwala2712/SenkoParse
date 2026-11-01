@@ -120,6 +120,7 @@ def main():
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--queries", default="1,2,3,4,5,6,7,8,9")
     ap.add_argument("--rows", default="1e8")
+    ap.add_argument("--settings", default="warm-all,warm-1t", help="time mode: which settings to run")
     a = ap.parse_args()
     os.makedirs(a.work, exist_ok=True)
     qs = [int(q) for q in a.queries.split(",")]
@@ -156,6 +157,8 @@ def main():
                 continue
         if a.mode == "time":
             for setting, th in (("warm-all", None), ("warm-1t", 1)):
+                if setting not in a.settings.split(","):
+                    continue
                 for eng in ("qe", "duckdb"):
                     for i in range(a.runs):
                         st = os.path.join(a.work, f"q{qn}_{eng}_stat.json")

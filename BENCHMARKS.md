@@ -181,3 +181,50 @@ Caveats: qe peak RSS includes the memory-mapped input (about 5.4 GB for a 5.55 G
 | Q7 join small + grp | 1e7 / 3e7 / 5e7 | 0.62 / 1.93 / 3.04 | 0.54 / 1.66 / 2.68 | 1.14x / 1.16x / 1.13x |
 | Q8 join medium + grp | 1e7 / 3e7 / 5e7 | 0.80 / 3.42 / 6.20 | 0.67 / 2.86 / 5.42 | 1.20x / 1.20x / 1.14x |
 | Q9 join big (N x N) | 1e7 / 3e7 / 5e7 | 9.32 / 37.18 / 78.80 | 1.64 / 5.85 / 9.04 | 5.69x / 6.36x / 8.71x |
+
+## Interim, after EXP-008 (integer join)
+
+Interim check, **not the final P5**: claims C12/C13 in `docs/status.md` are not updated from this run.
+
+- machine: Apple M3 Pro, 11 cores (5P + 6E), 18 GiB RAM, macOS 27.0.1, freshly rebooted; only Finder and Claude open
+- swap and memory state printed before the run: `vm.swapusage: total = 0.00M  used = 0.00M  free = 0.00M` (it was also 0 after the all-cores and the 1-thread pass); `vm_stat` before the all-cores pass: 199,807 free / 243,607 active / 425,898 inactive / 151,036 wired pages of 16 KiB; free disk 162 GiB; 1-minute load average 3.97 when timing started (it was 52 just after boot, so the run waited until it was below 4)
+- date: 2026-11-01, qe release build of `main` at `7be74a9` (engine = `53c0e96`, includes the EXP-008 integer join `bff545a`), DuckDB 2.0.0 (Python 3.11, `.demo-venv`)
+- data: the existing `data_1e8/` (not regenerated), same files as the earlier 1e8 run: x and big 5.55 GB each. Q1-Q8 read 5.55 GB, Q9 reads 11.10 GB
+- harness: `bench/file_vs_duckdb.py time --settings warm-all` and then `--settings warm-1t` (the `--settings` filter was added for this run; the default still runs both), 3 runs per cell, no run discarded, warm cache (each query's correctness run immediately precedes its timing). Raw: `docs/experiments/data/file1e8-interim-exp008-raw.jsonl`. Wall time = whole process, as in the earlier table (DuckDB includes Python start and `import duckdb`). RSS = child `ru_maxrss`, max of the 3 runs.
+- correctness: `check` first, and again before each query's timing in both passes. All nine outputs match DuckDB every time (Q4: 63,211,759 groups), so every query was timed.
+- all-cores pass took 285 s (under 25 min), so the 1-thread pass was run (944 s). Cold cache: not run.
+- "previous" = the min in the earlier section "File mode, `qe` vs DuckDB 2.0.0 — 1e8 rows" above. That run had 1.3 GiB swap in use; this one had none. **So the improvement factor mixes code changes (since then: the EXP-008 integer join, which touches Q7-Q9 only, plus progress counters) with the cleaner machine state.** For Q1-Q6 the aggregation code is unchanged, so their changes reflect the machine state, not the engine.
+- ratio < 1 means qe is faster.
+
+### warm cache, all cores
+
+| query | qe min s (this run) | qe min s (previous 1e8 run) | improvement | DuckDB min s (this run) | qe/DuckDB (min wall) | qe peak RSS MiB | DuckDB peak RSS MiB |
+|---|---|---|---|---|---|---|---|
+| Q1 global agg | 1.30 | 1.37 | 1.05x | 1.44 | 0.90x | 5389 | 787 |
+| Q2 group id1 | 1.21 | 1.33 | 1.10x | 1.62 | 0.75x | 5398 | 890 |
+| Q3 group id2 | 1.82 | 5.82 | 3.20x | 2.00 | 0.91x | 8414 | 1165 |
+| Q4 group id3 (~6e7 groups) | 13.18 | 15.02 | 1.14x | 3.26 | 4.04x | 9564 | 4712 |
+| Q5 group str id4 + DISTINCT | 8.64 | 11.74 | 1.36x | 2.76 | 3.13x | 10581 | 5013 |
+| Q6 filter + agg | 1.20 | 1.54 | 1.28x | 1.54 | 0.78x | 5323 | 880 |
+| Q7 join small + grp | 1.50 | 1.67 | 1.11x | 1.66 | 0.90x | 5420 | 773 |
+| Q8 join medium + grp | 3.40 | 4.74 | 1.39x | 2.49 | 1.37x | 9584 | 1109 |
+| Q9 join big | 14.55 | 85.39 | 5.87x | 4.94 | 2.95x | 10845 | 5374 |
+
+### warm cache, 1 thread each
+
+| query | qe min s (this run) | qe min s (previous 1e8 run) | improvement | DuckDB min s (this run) | qe/DuckDB (min wall) | qe peak RSS MiB | DuckDB peak RSS MiB |
+|---|---|---|---|---|---|---|---|
+| Q1 global agg | 9.10 | 9.17 | 1.01x | 7.89 | 1.15x | 5380 | 142 |
+| Q2 group id1 | 7.95 | 7.87 | 0.99x | 9.00 | 0.88x | 5382 | 143 |
+| Q3 group id2 | 10.35 | 16.32 | 1.58x | 10.00 | 1.04x | 8407 | 146 |
+| Q4 group id3 (~6e7 groups) | 25.90 | 51.52 | 1.99x | 20.83 | 1.24x | 10428 | 4605 |
+| Q5 group str id4 + DISTINCT | 28.62 | 36.25 | 1.27x | 14.74 | 1.94x | 10577 | 779 |
+| Q6 filter + agg | 7.71 | 11.23 | 1.46x | 8.64 | 0.89x | 5301 | 142 |
+| Q7 join small + grp | 10.03 | 10.49 | 1.05x | 9.22 | 1.09x | 5390 | 146 |
+| Q8 join medium + grp | 16.21 | 24.12 | 1.49x | 11.91 | 1.36x | 9502 | 158 |
+| Q9 join big | 40.33 | 148.47 | 3.68x | 24.66 | 1.64x | 10694 | 4630 |
+
+Raw wall seconds (run order), all cores: Q1 qe 1.32 1.30 1.32 / duck 1.44 1.45 1.45; Q2 1.24 1.21 1.23 / 1.63 1.62 1.63; Q3 1.85 1.86 1.82 / 2.08 2.00 2.01; Q4 13.18 13.88 13.53 / 3.37 3.33 3.26; Q5 8.64 8.83 8.85 / 2.79 2.81 2.76; Q6 1.22 1.20 1.22 / 1.54 1.61 1.59; Q7 1.53 1.52 1.50 / 1.66 1.71 1.72; Q8 3.44 3.43 3.40 / 2.49 2.52 2.49; Q9 15.44 14.55 14.59 / 4.94 4.99 4.94.
+1 thread: Q1 9.11 9.16 9.10 / 7.90 7.91 7.89; Q2 8.00 7.95 7.97 / 9.02 9.00 9.01; Q3 10.42 10.56 10.35 / 10.07 10.01 10.00; Q4 **64.19** 25.90 26.71 / 20.91 20.83 21.43; Q5 30.18 30.60 28.62 / 14.78 14.74 14.77; Q6 7.96 7.71 7.76 / 8.65 8.64 8.66; Q7 10.57 10.03 10.06 / 9.25 9.22 9.24; Q8 16.39 16.22 16.21 / 12.03 11.96 11.91; Q9 40.33 41.65 41.33 / 25.00 24.75 24.66.
+
+Caveats: qe peak RSS includes the memory-mapped input (about 5.4 GB per 5.55 GB file), so it is not comparable to DuckDB's RSS as "memory used". Swap stayed at 0 throughout, but qe peaks at up to 10.8 GiB on an 18 GiB machine. One cell is an outlier: the first 1-thread qe Q4 run took 64.19 s against 25.90 and 26.71 s for the other two; its cause was not investigated (swap was 0 after the pass). The all-cores spread is at most 7% (qe Q4, Q9). Three runs per cell. Cold cache not measured.
