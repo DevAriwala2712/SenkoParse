@@ -48,6 +48,8 @@ flowchart TB
 | [roadmap.md](roadmap.md) | future work as testable hypotheses with targets and falsifiers; the baseline vs DuckDB |
 | [adr/0001](adr/0001-parallel-and-fast-path-execution.md) | parallel execution and fast paths after M1 |
 | [adr/0002](adr/0002-stream-first-direction.md) | the direction change to bounded-memory streaming |
+| [adr/0005](adr/0005-reference-dialect.md) | *Proposed:* SQLite defines the answer for the shared subset, DuckDB for the rest (D-1) |
+| [adr/0006](adr/0006-memory-definition.md) | *Proposed:* report anonymous and total RSS; the budget controls anonymous; `pread` under a limit (D-3) |
 | [experiments/](experiments/README.md) | EXP-001 to EXP-005-stream and their raw data in `experiments/data/` |
 | [production-readiness.md](production-readiness.md) | the plan to 1.0: release criteria, audit of today, requirements, phases, risks, open decisions, scorecard |
 | [sql-surface.md](sql-surface.md) | every SQL feature with its state today, priority, oracle and acceptance test; source of the README SQL list |
