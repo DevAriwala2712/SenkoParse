@@ -2,7 +2,7 @@
 
 The tests are documented the way the experiments are: every suite is a small piece of research with a **claim**, a **falsifier** (what would prove it wrong), a **method**, an **oracle** (what "right" means), **results**, **falsification evidence** (we broke the code on purpose and the test failed), and **threats to validity**. "Green" means little unless the suite is known to be able to go red.
 
-**Contents:** [Pyramid](#the-pyramid) · [Run](#run) · [TEST-001 edge cases](#test-001-edge-cases) · [TEST-002 difftest](#test-002-differential-test-vs-sqlite) · [TEST-003 parallel](#test-003-parallel-scan-properties) · [TEST-004 stream](#test-004-stream-mode-equals-file-mode) · [TEST-005 splitter](#test-005-block-splitter-unit-tests) · [Falsification log](#falsification-log) · [Coverage matrix](#coverage-matrix) · [Gaps](#known-gaps) · [Template](#template)
+**Contents:** [Pyramid](#the-pyramid) · [Run](#run) · [TEST-001 edge cases](#test-001-edge-cases) · [TEST-002 difftest](#test-002-differential-test-vs-sqlite) · [TEST-003 parallel](#test-003-parallel-scan-properties) · [TEST-004 stream](#test-004-stream-mode-equals-file-mode) · [TEST-005 splitter](#test-005-block-splitter-unit-tests) · [TEST-006 surface audit](#test-006-sql-surface-audit) · [TEST-007 regression files](#test-007-regression-files) · [Falsification log](#falsification-log) · [Coverage matrix](#coverage-matrix) · [Gaps](#known-gaps) · [Template](#template)
 
 ## The pyramid
 
@@ -35,20 +35,25 @@ flowchart LR
 ## Run
 
 ```bash
-cargo test                                          # 23 tests + 1 ignored, ~45 s in debug
+cargo test                                          # 50 tests + 2 ignored, ~22 s test time in debug on an M3 Pro (plus build)
 cargo test --test stream                            # one suite
 DIFFTEST_STREAM_BLOCK=4096 cargo test --release --test difftest -- --ignored  # large run, seeds 1000-1002 (env: DIFFTEST_SEED / ROWS / QUERIES / STREAM_BLOCK)
 ```
 
-Current state (2026-10-31): `cargo test` → **23 passed, 0 failed, 1 ignored** (the large difftest), no warnings.
+Current state (2026-11-02, branch `phase-0-audit`): `cargo test` → **50 passed, 0 failed, 2 ignored** (the large difftest; BUG-0001). `cargo fmt --all --check` clean; `cargo clippy --all-targets` 6 warnings (listed in [status.md](status.md#open-items)). CI: `.github/workflows/ci.yml` (fmt, clippy, test on Linux and macOS).
 
 | Suite | File | Tests |
 |---|---|---|
 | Unit (engine) | `crates/engine/src/storage/csv/stream.rs` | 2 |
 | TEST-001 | `tests/edge_cases.rs` | 9 |
-| TEST-002 | `tests/difftest.rs` | 1 (+1 ignored) |
-| TEST-003 | `tests/parallel.rs` | 5 |
+| TEST-002 | `tests/difftest.rs` | 2 (+1 ignored): `difftest_small`, `difftest_join_key_cases` (EXP-008), `difftest_large` |
+| TEST-003 | `tests/parallel.rs` | 8 (the 5 below, plus `distinct_per_worker_…`, `table_reuse_…` and `integer_join_results_…` thread-independence tests added with EXP-008/009) |
 | TEST-004 | `tests/stream.rs` | 6 |
+| TEST-006 | `tests/surface_audit.rs` | 12 |
+| TEST-006 | `crates/cli/tests/surface_audit_cli.rs` | 2 (+1 ignored: BUG-0001) |
+| TEST-007 | `tests/regression.rs` | 1 |
+| CLI | `crates/cli/tests/progress.rs` | 2 |
+| Demo (unit) | `crates/demo/src/` | 6 |
 
 ---
 
@@ -170,6 +175,29 @@ Current state (2026-10-31): `cargo test` → **23 passed, 0 failed, 1 ignored** 
 
 ---
 
+## TEST-006: SQL surface audit
+
+- **Claim.** Every row of [sql-surface.md](sql-surface.md) has the state its probe observes: supported rows equal SQLite; ⛔ rows fail with `unsupported` and no rows; ❌ rows fail some other way (or, for capability rows, the mechanism does not exist).
+- **Falsifier.** A supported row that differs from SQLite on any configuration, a rejected row that returns rows, or an error class that differs from the table.
+- **Method.** Four small hand-made tables (`t`, `u`, `w`, `x`; `i64`, `str`, `decimal(2)`, `f64`, `date`, with NULLs, duplicate and NULL join keys, an apostrophe in a string) loaded into the engine as CSV and into SQLite. Supported probes run on 5 configurations: default, `--no-opt`, 3 threads with 16-byte chunks and forced partitioned merge, stream (1-byte reads, 7-byte blocks) with and without `--no-opt`. Rejected probes run on default and `--no-opt` and must give identical text. CLI flag rows spawn the real `qe` binary.
+- **Oracle.** SQLite for supported rows; the observed error class for rejected rows.
+- **Result.** 12/12 and 2/2 pass (`cargo test --test surface_audit`, `cargo test -p qe --test surface_audit_cli`). No wrong answers. One bug: BUG-0001 (`#[ignore]`, fails).
+- **Falsification.** Built in: `supported_probe_detects_a_wrong_answer` and `supported_probe_detects_a_wrong_value` are `#[should_panic]` probes against a deliberately different SQLite query (one row missing; one value off by 1e-6 relative). See also M-3.
+- **Threats.** Tiny data; no quoted fields (so it is blind to M-2); only the spellings listed are probed (a different spelling of a ❌ feature may fail differently); the generator does not yet emit `SELECT *`, so PRJ-06 is covered by hand-written queries only.
+
+---
+
+## TEST-007: regression files
+
+- **Claim.** Each statement in `tests/regression/demo_candidates.sql` fails today with exactly the recorded error text, on default and `--no-opt`.
+- **Falsifier.** Any changed text, or a candidate that starts returning rows without its expectation being updated.
+- **Method.** `tests/regression.rs` parses `-- id:`, `-- data:`, `-- expect-error:` directives; `{data}` is replaced by the data directory.
+- **Result.** 1/1 pass (16 candidates).
+- **Falsification.** M-3.
+- **Threats.** Records failures, not answers: the real demo query (R-0001) is still unknown.
+
+---
+
 ## Falsification log
 
 A test that cannot fail proves nothing. Each entry breaks the code on purpose and records what went red, then reverts.
@@ -178,6 +206,8 @@ A test that cannot fail proves nothing. Each entry breaks the code on purpose an
 |---|---|---|---|
 | M-1 | parallel splitter ignores quote state (`row_start_at_or_after(.., false)`) | quoted-newline tests fail | `difftest_small` failed with `unterminated quoted field` ([EXP-003](experiments/003-parallel-chunked-scan.md)); reverted |
 | M-2 | stream `BlockSplitter::scan` ignores quote bytes (`if false && buf[at] == b'"'`) | stream tests with quoted newlines fail | 3 of 6 stream tests (`tricky_csv_…`, `odd_inputs_…`, `bad_value_late_…`) and the splitter unit test failed; `documented_stream_errors_are_clear`, `limit_stops_…` and `joins_…` passed because their data has no quoted newlines. Reverted. **Re-run 2026-11-02 (Phase 0 task 0.3), now with the difftest:** `difftest_small` fails at seed 2 (the first seed with quotes; seed 1 is quote-free and passes) with `[seed 2 q0] stream/blocks engine error: <stdin>: row 10: expected 4 fields, found 3`, on both stream configurations; the large run (`DIFFTEST_STREAM_BLOCK=4096`) fails at seed 1000 with `<stdin>: row 89: expected 8 fields, found 3`. Stream tests: the same 3 of 6 fail; the splitter unit test fails. `surface_audit` (12) and `regression` (1) stay green: their data has no quoted newlines. Reverted with `git checkout`; all suites green again |
+| M-3 | `demo_candidates.sql`: expected text of C02 changed to `unsupported SQL feature: CASEX` (2026-11-02) | `regression` fails | failed with `want: unsupported SQL feature: CASEX`; reverted, green |
+| M-4 | *(built in, runs every time)* the audit harness is given a SQLite query that drops one row, and one that scales a float by 1.000001 | both probes panic | `supported_probe_detects_a_wrong_answer` and `…_wrong_value` pass as `#[should_panic]` (12/12) |
 | P-1 | *(process, not code)* RSS measured from the benchmark harness | | the first EXP-005-stream run reported 341–666 MiB for every engine; the harness's own memory was inherited across `exec`. Discarded, harness fixed ([EXP-005-stream](experiments/005-stream-memory.md#caveats)) |
 
 ## Coverage matrix
