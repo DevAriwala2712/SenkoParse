@@ -30,7 +30,11 @@ fn qe(args: &[&str], stdin: &[u8]) -> (bool, String, String) {
     });
     let o = ch.wait_with_output().unwrap();
     let _ = h.join();
-    (o.status.success(), String::from_utf8_lossy(&o.stdout).into_owned(), String::from_utf8_lossy(&o.stderr).into_owned())
+    (
+        o.status.success(),
+        String::from_utf8_lossy(&o.stdout).into_owned(),
+        String::from_utf8_lossy(&o.stderr).into_owned(),
+    )
 }
 
 fn fails_with(id: &str, args: &[&str], stdin: &[u8], want: &str) {

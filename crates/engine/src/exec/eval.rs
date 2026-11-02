@@ -187,7 +187,9 @@ fn logic(op: BinOp, a: &Column, b: &Column) -> Result<Column> {
 fn neg(c: &Column) -> Result<Column> {
     let data = match &c.data {
         ColData::I64(v) => ColData::I64(v.iter().map(|x| x.checked_neg().ok_or_else(ovf)).collect::<Result<_>>()?),
-        ColData::Dec(v, s) => ColData::Dec(v.iter().map(|x| x.checked_neg().ok_or_else(ovf)).collect::<Result<_>>()?, *s),
+        ColData::Dec(v, s) => {
+            ColData::Dec(v.iter().map(|x| x.checked_neg().ok_or_else(ovf)).collect::<Result<_>>()?, *s)
+        }
         ColData::F64(v) => ColData::F64(v.iter().map(|x| -x).collect()),
         _ => unreachable!(),
     };
@@ -213,7 +215,9 @@ pub fn cast(c: &Column, to: Ty) -> Result<Column> {
             let p = POW10[(b - a) as usize];
             ColData::Dec(v.iter().map(|&x| x.checked_mul(p).ok_or_else(ovf)).collect::<Result<_>>()?, b)
         }
-        (d, t) => return Err(err!("internal: unsupported cast {:?} -> {}", Column::new(d.clone(), None).ty(), t.name())),
+        (d, t) => {
+            return Err(err!("internal: unsupported cast {:?} -> {}", Column::new(d.clone(), None).ty(), t.name()))
+        }
     };
     Ok(Column::new(data, c.nulls.clone()))
 }

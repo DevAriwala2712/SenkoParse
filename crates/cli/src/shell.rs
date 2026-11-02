@@ -190,7 +190,11 @@ fn print_csv(sh: &Shown, out: &mut impl Write) {
     }
     let _ = writeln!(out, "{}", sh.names.iter().map(|s| f(s)).collect::<Vec<_>>().join(","));
     for r in &sh.rows {
-        let _ = writeln!(out, "{}", r.iter().map(|s| if s == "NULL" { String::new() } else { f(s) }).collect::<Vec<_>>().join(","));
+        let _ = writeln!(
+            out,
+            "{}",
+            r.iter().map(|s| if s == "NULL" { String::new() } else { f(s) }).collect::<Vec<_>>().join(",")
+        );
     }
 }
 
@@ -302,7 +306,11 @@ pub fn human(b: u64) -> String {
         v /= 1000.0;
         i += 1;
     }
-    if i == 0 { format!("{b} B") } else { format!("{v:.2} {}", U[i]) }
+    if i == 0 {
+        format!("{b} B")
+    } else {
+        format!("{v:.2} {}", U[i])
+    }
 }
 
 fn help() {

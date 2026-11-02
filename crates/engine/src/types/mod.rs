@@ -461,11 +461,7 @@ impl Column {
             }
         };
         let nulls = if idx.contains(&NONE_IDX) || self.nulls.is_some() {
-            Some(
-                idx.iter()
-                    .map(|&i| i == NONE_IDX || self.nulls.as_ref().map_or(false, |n| n[i as usize]))
-                    .collect(),
-            )
+            Some(idx.iter().map(|&i| i == NONE_IDX || self.nulls.as_ref().map_or(false, |n| n[i as usize])).collect())
         } else {
             None
         };

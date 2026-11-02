@@ -312,7 +312,9 @@ pub fn probe_batch(
             pi.reserve(pb.len);
             bi.reserve(pb.len);
             match &c.data {
-                ColData::I64(v) | ColData::Dec(v, _) => probe_ints(ij, pb.len, nulls, |i| v[i], left_join, &mut pi, &mut bi),
+                ColData::I64(v) | ColData::Dec(v, _) => {
+                    probe_ints(ij, pb.len, nulls, |i| v[i], left_join, &mut pi, &mut bi)
+                }
                 ColData::Date(v) => probe_ints(ij, pb.len, nulls, |i| v[i] as i64, left_join, &mut pi, &mut bi),
                 _ => unreachable!("integer join on a non-integer key"),
             }
@@ -370,7 +372,9 @@ pub struct ProbeOp {
 impl Op for ProbeOp {
     fn next(&mut self) -> Result<Option<Batch>> {
         while let Some(pb) = self.input.next()? {
-            if let Some(out) = probe_batch(&self.built, &pb, &self.pkeys, self.build_left, self.left_join, &mut self.buf)? {
+            if let Some(out) =
+                probe_batch(&self.built, &pb, &self.pkeys, self.build_left, self.left_join, &mut self.buf)?
+            {
                 return Ok(Some(out));
             }
         }
@@ -418,7 +422,8 @@ impl Op for HashJoin {
             });
         }
         let built = self.built.as_ref().unwrap();
-        let (probe_op, pkeys) = if self.build_left { (&mut self.right, &self.rkeys) } else { (&mut self.left, &self.lkeys) };
+        let (probe_op, pkeys) =
+            if self.build_left { (&mut self.right, &self.rkeys) } else { (&mut self.left, &self.lkeys) };
         while let Some(pb) = probe_op.next()? {
             if let Some(out) =
                 probe_batch(built, &pb, pkeys, self.build_left, self.kind == JoinType::Left, &mut self.buf)?

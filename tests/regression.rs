@@ -47,7 +47,10 @@ fn data_dir(kind: &str) -> PathBuf {
     std::fs::create_dir_all(&d).unwrap();
     std::fs::write(d.join("t.csv"), "col,x,a,b\na,1,1,1\nb,-2,1,2\na,3,2,1\n,,,\n").unwrap();
     match kind {
-        "default" => std::fs::write(d.join("schema.toml"), "[t]\ncol = \"str\"\nx = \"i64\"\na = \"i64\"\nb = \"i64\"\n").unwrap(),
+        "default" => {
+            std::fs::write(d.join("schema.toml"), "[t]\ncol = \"str\"\nx = \"i64\"\na = \"i64\"\nb = \"i64\"\n")
+                .unwrap()
+        }
         "no-schema" => {
             let _ = std::fs::remove_file(d.join("schema.toml"));
         }
@@ -76,7 +79,10 @@ fn demo_candidates_fail_with_the_recorded_text() {
         let want = c.expect.replace("{data}", &d.display().to_string());
         eprintln!("{}: {}\n    -> {got}", c.id, c.sql);
         if got != want || got_ref != got {
-            bad.push(format!("{}: {}\n    want:     {want}\n    default:  {got}\n    --no-opt: {got_ref}", c.id, c.sql));
+            bad.push(format!(
+                "{}: {}\n    want:     {want}\n    default:  {got}\n    --no-opt: {got_ref}",
+                c.id, c.sql
+            ));
         }
     }
     assert!(bad.is_empty(), "\n{}", bad.join("\n"));

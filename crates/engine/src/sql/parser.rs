@@ -3,15 +3,67 @@ use super::lexer::{Tok, Token};
 use crate::{err, Result};
 
 const RESERVED: &[&str] = &[
-    "select", "from", "where", "group", "by", "having", "order", "limit", "join", "inner", "left", "right", "full",
-    "cross", "outer", "on", "and", "or", "not", "is", "null", "as", "asc", "desc", "distinct", "union", "intersect",
-    "except", "like", "in", "between", "case", "when", "then", "else", "end", "offset", "using", "natural", "with",
-    "exists", "all", "any",
+    "select",
+    "from",
+    "where",
+    "group",
+    "by",
+    "having",
+    "order",
+    "limit",
+    "join",
+    "inner",
+    "left",
+    "right",
+    "full",
+    "cross",
+    "outer",
+    "on",
+    "and",
+    "or",
+    "not",
+    "is",
+    "null",
+    "as",
+    "asc",
+    "desc",
+    "distinct",
+    "union",
+    "intersect",
+    "except",
+    "like",
+    "in",
+    "between",
+    "case",
+    "when",
+    "then",
+    "else",
+    "end",
+    "offset",
+    "using",
+    "natural",
+    "with",
+    "exists",
+    "all",
+    "any",
 ];
 /// Keywords we recognise only to give a clear "unsupported" error.
 const UNSUPPORTED: &[&str] = &[
-    "right", "full", "cross", "natural", "union", "intersect", "except", "like", "in", "between", "case", "offset", "using",
-    "with", "exists",
+    "right",
+    "full",
+    "cross",
+    "natural",
+    "union",
+    "intersect",
+    "except",
+    "like",
+    "in",
+    "between",
+    "case",
+    "offset",
+    "using",
+    "with",
+    "exists",
 ];
 
 pub struct Parser<'a> {
@@ -78,7 +130,8 @@ impl<'a> Parser<'a> {
                 return err!("unsupported SQL feature: {}", s.to_ascii_uppercase());
             }
         }
-        let got = if t.tok == Tok::Eof { "end of input".to_string() } else { format!("'{}'", &self.src[t.start..t.end]) };
+        let got =
+            if t.tok == Tok::Eof { "end of input".to_string() } else { format!("'{}'", &self.src[t.start..t.end]) };
         err!("syntax error at offset {}: expected {want}, found {got}", t.start)
     }
 

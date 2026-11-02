@@ -3,7 +3,7 @@
 //! allocate; only creating a group copies its key.
 use super::eval::eval;
 use super::hash::{FxMap, FxSet, IntMap};
-use super::par::{ExecCtx, Chunked};
+use super::par::{Chunked, ExecCtx};
 use super::Op;
 use crate::plan::{AggCall, BExpr};
 use crate::sql::AggFunc;
@@ -22,11 +22,25 @@ enum Mm {
 
 enum St {
     Count(i64),
-    SumI { s: i128, any: bool },
+    SumI {
+        s: i128,
+        any: bool,
+    },
     /// Kahan-Babuska (compensated) float sum.
-    SumF { s: f64, c: f64, any: bool },
-    AvgI { s: i128, n: i64 },
-    AvgF { s: f64, c: f64, n: i64 },
+    SumF {
+        s: f64,
+        c: f64,
+        any: bool,
+    },
+    AvgI {
+        s: i128,
+        n: i64,
+    },
+    AvgF {
+        s: f64,
+        c: f64,
+        n: i64,
+    },
     MinMax(Mm),
     Distinct(Box<FxSet<Box<[u8]>>>),
 }

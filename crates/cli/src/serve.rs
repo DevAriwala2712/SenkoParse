@@ -224,11 +224,15 @@ fn run_query(srv: &Srv, sql: &str, max: usize) -> String {
     match res {
         Ok(sh) => {
             let (tables, bytes) = referenced_tables(&sess, sql);
-            let threads = sess.opts.threads.unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get()));
+            let threads =
+                sess.opts.threads.unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get()));
             let names: Vec<String> = sh.names.iter().map(|n| jstr(n)).collect();
             let numeric: Vec<&str> = sh.numeric.iter().map(|b| if *b { "true" } else { "false" }).collect();
-            let rows: Vec<String> =
-                sh.rows.iter().map(|r| format!("[{}]", r.iter().map(|v| jstr(v)).collect::<Vec<_>>().join(","))).collect();
+            let rows: Vec<String> = sh
+                .rows
+                .iter()
+                .map(|r| format!("[{}]", r.iter().map(|v| jstr(v)).collect::<Vec<_>>().join(",")))
+                .collect();
             let scan_bytes = engine::progress::scan_bytes().saturating_sub(SCAN_BYTES_BASE.load(Relaxed));
             let scan_rows = engine::progress::scan_rows().saturating_sub(SCAN_ROWS_BASE.load(Relaxed));
             let tl: Vec<String> = tables.iter().map(|t| jstr(t)).collect();
@@ -337,14 +341,23 @@ fn tables_json(s: &Session) -> String {
                 .map(|n| {
                     let t = &cat.tables[n];
                     let size = std::fs::metadata(&t.path).map(|m| m.len()).unwrap_or(0);
-                    let cols: Vec<String> =
-                        t.cols.iter().map(|(c, ty)| format!(r#"{{"name":{},"type":{}}}"#, jstr(c), jstr(&format!("{ty:?}")))).collect();
-                    format!(r#"{{"name":{},"size":{},"bytes":{size},"cols":[{}]}}"#, jstr(n), jstr(&shell::human(size)), cols.join(","))
+                    let cols: Vec<String> = t
+                        .cols
+                        .iter()
+                        .map(|(c, ty)| format!(r#"{{"name":{},"type":{}}}"#, jstr(c), jstr(&format!("{ty:?}"))))
+                        .collect();
+                    format!(
+                        r#"{{"name":{},"size":{},"bytes":{size},"cols":[{}]}}"#,
+                        jstr(n),
+                        jstr(&shell::human(size)),
+                        cols.join(",")
+                    )
                 })
                 .collect();
             // The "database" is the data directory: one schema.toml plus its CSV files.
             let abs = std::fs::canonicalize(&s.data).unwrap_or_else(|_| s.data.clone());
-            let name = abs.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| abs.display().to_string());
+            let name =
+                abs.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| abs.display().to_string());
             format!(
                 r#"{{"database":{},"path":{},"tables":[{}]}}"#,
                 jstr(&name),

@@ -33,7 +33,15 @@ struct Args {
 }
 
 fn parse_args() -> Args {
-    let mut a = Args { size: "5x".into(), replay: None, record: None, data: PathBuf::from(".demo-data"), qe: None, py: std::env::var("DUCKDB_PY").ok(), no_duckdb: false };
+    let mut a = Args {
+        size: "5x".into(),
+        replay: None,
+        record: None,
+        data: PathBuf::from(".demo-data"),
+        qe: None,
+        py: std::env::var("DUCKDB_PY").ok(),
+        no_duckdb: false,
+    };
     let mut it = std::env::args().skip(1);
     while let Some(x) = it.next() {
         let mut val = |f: &str| it.next().unwrap_or_else(|| die(&format!("{f} needs a value")));
@@ -64,11 +72,17 @@ fn find_root() -> PathBuf {
     if let Ok(e) = std::env::current_exe() {
         cands.extend(e.ancestors().skip(1).map(|p| p.to_path_buf()));
     }
-    cands.into_iter().find(|d| d.join("bench/duckdb_run.py").exists()).unwrap_or_else(|| die("run from the repository (bench/duckdb_run.py not found)"))
+    cands
+        .into_iter()
+        .find(|d| d.join("bench/duckdb_run.py").exists())
+        .unwrap_or_else(|| die("run from the repository (bench/duckdb_run.py not found)"))
 }
 
 fn query() -> String {
-    format!("SELECT {} FROM a JOIN ids i ON a.center_id = i.id", COLS.iter().map(|c| format!("a.{c}")).collect::<Vec<_>>().join(", "))
+    format!(
+        "SELECT {} FROM a JOIN ids i ON a.center_id = i.id",
+        COLS.iter().map(|c| format!("a.{c}")).collect::<Vec<_>>().join(", ")
+    )
 }
 
 fn pick_python(a: &Args, root: &Path) -> Option<String> {
@@ -131,7 +145,8 @@ fn main() {
     let (mut have_duck, mut py) = (false, None);
 
     if let Some(path) = &a.replay {
-        let text = std::fs::read_to_string(path).unwrap_or_else(|e| die(&format!("cannot read {}: {e}", path.display())));
+        let text =
+            std::fs::read_to_string(path).unwrap_or_else(|e| die(&format!("cannot read {}: {e}", path.display())));
         meta.mode = "REPLAY";
         if let Some(rec) = model::load_recording(&text) {
             meta.size = rec.meta.size.clone();
@@ -142,17 +157,32 @@ fn main() {
             meta.query = rec.meta.query.clone();
             meta.note = "REPLAY: every number was measured live when this run was recorded".to_string();
             qe.source = Source::Replay;
-            duck.source = if rec.duck.0.is_empty() { Source::Missing("no DuckDB data in this recording".into()) } else { Source::Replay };
+            duck.source = if rec.duck.0.is_empty() {
+                Source::Missing("no DuckDB data in this recording".into())
+            } else {
+                Source::Replay
+            };
             replay = Some(rec);
         } else {
             // EXP-005 raw.jsonl: summaries only. Be explicit that nothing in between is known.
-            let q = data::recorded(path, "qe pipe", &a.size).unwrap_or_else(|| die("no qe rows for this size in the recording"));
+            let q = data::recorded(path, "qe pipe", &a.size)
+                .unwrap_or_else(|| die("no qe rows for this size in the recording"));
             let d = data::recorded(path, "duckdb pipe", &a.size);
-            let mb = text.lines().filter_map(json::parse_obj).find(|o| json::text(o, "size").as_deref() == Some(a.size.as_str())).and_then(|o| json::num(&o, "input_mb")).unwrap_or(0.0);
+            let mb = text
+                .lines()
+                .filter_map(json::parse_obj)
+                .find(|o| json::text(o, "size").as_deref() == Some(a.size.as_str()))
+                .and_then(|o| json::num(&o, "input_mb"))
+                .unwrap_or(0.0);
             meta.total_bytes = (mb * 1e6) as u64;
             if let Some((m, d)) = read_machine_from_raw(path) {
                 meta.machine = m;
-                meta.duckdb = d.split("duckdb ").nth(1).and_then(|s| s.split(';').next()).map(|v| format!("{v} (memory_limit=256MB, threads=1)")).unwrap_or_default();
+                meta.duckdb = d
+                    .split("duckdb ")
+                    .nth(1)
+                    .and_then(|s| s.split(';').next())
+                    .map(|v| format!("{v} (memory_limit=256MB, threads=1)"))
+                    .unwrap_or_default();
             }
             meta.note = "REPLAY of EXP-005 summary: totals were recorded, curves in between were not".into();
             qe.source = Source::Summary(q);
@@ -166,9 +196,13 @@ fn main() {
         py = pick_python(&a, &root);
         have_duck = py.is_some();
         match &py {
-            Some(p) => meta.duckdb = format!("{} (memory_limit=256MB, threads=1)", data::duckdb_version(p).unwrap_or_default()),
+            Some(p) => {
+                meta.duckdb = format!("{} (memory_limit=256MB, threads=1)", data::duckdb_version(p).unwrap_or_default())
+            }
             None => {
-                meta.duckdb = "not installed here; DuckDB panel shows recorded numbers (2.0.0, memory_limit=256MB, threads=1)".into();
+                meta.duckdb =
+                    "not installed here; DuckDB panel shows recorded numbers (2.0.0, memory_limit=256MB, threads=1)"
+                        .into();
                 duck.source = match data::recorded(&raw_default, "duckdb pipe", &a.size) {
                     Some(r) => Source::Summary(r),
                     None => Source::Missing("DuckDB not installed and no recording".into()),
@@ -184,7 +218,10 @@ fn main() {
         let data_abs = std::fs::canonicalize(&a.data).unwrap_or(a.data.clone());
         let qspec = live::Spec {
             program: qe_bin.to_string_lossy().into_owned(),
-            args: ["--data", data_abs.to_str().unwrap(), "--stdin", "a", "--threads", "1", &query()].iter().map(|s| s.to_string()).collect(),
+            args: ["--data", data_abs.to_str().unwrap(), "--stdin", "a", "--threads", "1", &query()]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
             input: &input,
             work: &work_root.join("qe"),
         };
@@ -193,7 +230,14 @@ fn main() {
         if let Some(p) = &py {
             let dspec = live::Spec {
                 program: p.clone(),
-                args: vec![root.join("bench/duckdb_run.py").to_string_lossy().into_owned(), "pipe".into(), data_abs.to_string_lossy().into_owned(), "".into(), "{TEMP}".into(), "{OUT}".into()],
+                args: vec![
+                    root.join("bench/duckdb_run.py").to_string_lossy().into_owned(),
+                    "pipe".into(),
+                    data_abs.to_string_lossy().into_owned(),
+                    "".into(),
+                    "{TEMP}".into(),
+                    "{OUT}".into(),
+                ],
                 input: &input,
                 work: &work_root.join("duckdb"),
             };
@@ -202,7 +246,8 @@ fn main() {
         }
     }
 
-    let mut rec_out = a.record.as_ref().map(|p| std::fs::File::create(p).unwrap_or_else(|e| die(&format!("--record: {e}"))));
+    let mut rec_out =
+        a.record.as_ref().map(|p| std::fs::File::create(p).unwrap_or_else(|e| die(&format!("--record: {e}"))));
     if let Some(f) = rec_out.as_mut() {
         let _ = writeln!(f, "{}", model_meta(&meta));
     }
@@ -255,7 +300,11 @@ fn main() {
             }
         }
         let _ = have_duck;
-        let sum_done = reveal_clock && [&qe, &duck].iter().all(|e| match &e.source { Source::Summary(r) => now_ms >= (r.wall_s * 1000.0) as u64, _ => true });
+        let sum_done = reveal_clock
+            && [&qe, &duck].iter().all(|e| match &e.source {
+                Source::Summary(r) => now_ms >= (r.wall_s * 1000.0) as u64,
+                _ => true,
+            });
         let all_done = qe.done() && duck.done() && (!reveal_clock || sum_done);
         let view = ui::View { qe: &qe, duck: &duck, meta: &meta, now_ms, color, reveal_clock };
         if interactive {

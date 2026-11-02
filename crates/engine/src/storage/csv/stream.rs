@@ -246,7 +246,8 @@ mod tests {
     use super::*;
 
     fn blocks(data: &[u8], target: usize, piece: usize) -> Vec<Vec<u8>> {
-        let mut s = BlockSplitter::with_limits(Box::new(std::io::Cursor::new(data.to_vec())), target, piece, MAX_ROW_BYTES);
+        let mut s =
+            BlockSplitter::with_limits(Box::new(std::io::Cursor::new(data.to_vec())), target, piece, MAX_ROW_BYTES);
         let mut v = vec![];
         while let Some(b) = s.next_block().unwrap() {
             v.push(b);
@@ -272,7 +273,8 @@ mod tests {
 
     #[test]
     fn long_row_is_an_error() {
-        let mut s = BlockSplitter::with_limits(Box::new(std::io::Cursor::new(vec![b'x'; 5 << 20])), 1 << 20, 1 << 20, 2 << 20);
+        let mut s =
+            BlockSplitter::with_limits(Box::new(std::io::Cursor::new(vec![b'x'; 5 << 20])), 1 << 20, 1 << 20, 2 << 20);
         let e = loop {
             match s.next_block() {
                 Err(e) => break e,

@@ -121,7 +121,11 @@ fn integer_like_group_keys_match_reference_including_order() {
         x ^= x << 17;
         let g = if x % 11 == 0 { String::new() } else { ((x >> 8) % 3000).to_string() }; // NULLs + ~3000 groups
         let p = if x % 13 == 0 { String::new() } else { format!("{}.{:02}", (x >> 20) % 50, (x >> 30) % 100) };
-        let d = if x % 17 == 0 { String::new() } else { format!("2021-{:02}-{:02}", 1 + (x >> 12) % 12, 1 + (x >> 24) % 28) };
+        let d = if x % 17 == 0 {
+            String::new()
+        } else {
+            format!("2021-{:02}-{:02}", 1 + (x >> 12) % 12, 1 + (x >> 24) % 28)
+        };
         let v = if x % 7 == 0 { String::new() } else { ((x >> 33) % 1000).to_string() };
         csv.push_str(&format!("{i},{g},{p},{d},{v}\n"));
     }
@@ -161,7 +165,11 @@ fn partitioned_merge_matches_reference_and_is_thread_independent() {
         x ^= x << 17;
         let g = if x % 9 == 0 { String::new() } else { ((x >> 8) % 4000).to_string() };
         let p = if x % 13 == 0 { String::new() } else { format!("{}.{:02}", (x >> 20) % 40, (x >> 30) % 100) };
-        let d = if x % 17 == 0 { String::new() } else { format!("2022-{:02}-{:02}", 1 + (x >> 12) % 12, 1 + (x >> 24) % 28) };
+        let d = if x % 17 == 0 {
+            String::new()
+        } else {
+            format!("2022-{:02}-{:02}", 1 + (x >> 12) % 12, 1 + (x >> 24) % 28)
+        };
         let v = if x % 7 == 0 { String::new() } else { ((x >> 33) % 1000).to_string() };
         let f = ((x >> 11) % 100000) as f64 / 7.0 * if x % 2 == 0 { 1e6 } else { 1e-3 };
         csv.push_str(&format!("{i},{g},{p},{d},{v},{f}\n"));
@@ -194,7 +202,9 @@ fn partitioned_merge_matches_reference_and_is_thread_independent() {
         for (a, b) in got.iter().zip(&want) {
             for (x, y) in a.iter().zip(b) {
                 match (x, y) {
-                    (Value::F64(x), Value::F64(y)) => assert!((x - y).abs() <= 1e-9 * x.abs().max(y.abs()).max(1.0), "{q}: {x} vs {y}"),
+                    (Value::F64(x), Value::F64(y)) => {
+                        assert!((x - y).abs() <= 1e-9 * x.abs().max(y.abs()).max(1.0), "{q}: {x} vs {y}")
+                    }
                     _ => assert_eq!(x, y, "{q}"),
                 }
             }
@@ -258,7 +268,11 @@ fn table_reuse_gives_identical_results_for_1_2_and_4_threads() {
         let reference = canon(run(&d, q, Options { no_opt: true, ..Default::default() }).unwrap());
         assert_eq!(one_chunk, reference, "{q}");
         for threads in [1, 2, 4] {
-            assert_eq!(canon(run(&d, q, opts(threads, 600)).unwrap()), reference, "threads={threads} vs reference: {q}");
+            assert_eq!(
+                canon(run(&d, q, opts(threads, 600)).unwrap()),
+                reference,
+                "threads={threads} vs reference: {q}"
+            );
         }
     }
 }
@@ -376,7 +390,11 @@ fn integer_join_results_do_not_depend_on_thread_count() {
     for q in queries {
         let base = run(&d, q, o(1)).unwrap();
         for threads in [2, 4] {
-            assert_eq!(run(&d, q, o(threads)).unwrap(), base, "threads={threads}: {q} (must be bit-identical, incl. row order)");
+            assert_eq!(
+                run(&d, q, o(threads)).unwrap(),
+                base,
+                "threads={threads}: {q} (must be bit-identical, incl. row order)"
+            );
         }
         if !q.contains("AVG") && !q.contains("SUM(f.v)") {
             let canon = |mut r: Vec<Vec<Value>>| {

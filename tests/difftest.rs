@@ -72,7 +72,8 @@ struct Table {
     rows: Vec<Vec<Cell>>,
 }
 
-const G_POOL: &[&str] = &["red", "green", "blue", "a,b", "say \"hi\"", "line\nbreak", "ünï", "x", "o'neil", "  pad ", "CR\r\nLF"];
+const G_POOL: &[&str] =
+    &["red", "green", "blue", "a,b", "say \"hi\"", "line\nbreak", "ünï", "x", "o'neil", "  pad ", "CR\r\nLF"];
 const G_CLEAN: &[&str] = &["red", "green", "blue", "ab", "say hi", "x", "oneil", "  pad ", "zz"];
 const LIT_POOL: &[&str] = &["red", "green", "blue", "a,b", "ünï", "x", "o'neil", "zzz", "a"];
 
@@ -400,7 +401,8 @@ fn build(rng: &mut Rng, from: &str, sc: &[Col], mut conds: Vec<String>) -> (Stri
         }
         let mut sql = format!("SELECT {} FROM {from}{where_}", items.join(", "));
         if ordered {
-            let ob: Vec<String> = (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();
+            let ob: Vec<String> =
+                (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();
             write!(sql, " ORDER BY {}", ob.join(", ")).unwrap();
             if rng.chance(30) {
                 write!(sql, " LIMIT {}", rng.range(0, 40)).unwrap();
@@ -451,7 +453,8 @@ fn build(rng: &mut Rng, from: &str, sc: &[Col], mut conds: Vec<String>) -> (Stri
         let ordered = rng.chance(65);
         if ordered {
             // keys first -> total order on groups; the remaining positions only break non-existent ties
-            let ob: Vec<String> = (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();
+            let ob: Vec<String> =
+                (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();
             write!(sql, " ORDER BY {}", ob.join(", ")).unwrap();
             if rng.chance(30) {
                 write!(sql, " LIMIT {}", rng.range(0, 25)).unwrap();
@@ -488,9 +491,15 @@ fn gen_query(rng: &mut Rng, tabs: &[Table]) -> (String, bool) {
                 // dim on the left, facts joined in (left side smaller -> exercises build-side choice)
                 let mut sc2 = scope_of(d, "d");
                 sc2.extend(scope_of(f, "f"));
-                { let j = jk(rng); build(rng, &format!("dim d {j} facts f ON {on}"), &sc2, vec![]) }
+                {
+                    let j = jk(rng);
+                    build(rng, &format!("dim d {j} facts f ON {on}"), &sc2, vec![])
+                }
             } else {
-                { let j = jk(rng); build(rng, &format!("facts f {j} dim d ON {on}"), &sc, vec![]) }
+                {
+                    let j = jk(rng);
+                    build(rng, &format!("facts f {j} dim d ON {on}"), &sc, vec![])
+                }
             }
         }
         6 => {
@@ -512,12 +521,18 @@ fn gen_query(rng: &mut Rng, tabs: &[Table]) -> (String, bool) {
             // many-to-many self join on a string key
             let mut sc = scope_of(d, "a");
             sc.extend(scope_of(d, "b"));
-            { let j = jk(rng); build(rng, &format!("dim a {j} dim b ON a.grp = b.grp"), &sc, vec![]) }
+            {
+                let j = jk(rng);
+                build(rng, &format!("dim a {j} dim b ON a.grp = b.grp"), &sc, vec![])
+            }
         }
         _ => {
             let mut sc = scope_of(o, "o");
             sc.extend(scope_of(f, "f"));
-            { let j = jk(rng); build(rng, &format!("other o {j} facts f ON o.x = f.f"), &sc, vec![]) }
+            {
+                let j = jk(rng);
+                build(rng, &format!("other o {j} facts f ON o.x = f.f"), &sc, vec![])
+            }
         }
     }
 }
@@ -606,7 +621,9 @@ fn multiset_eq(a: &[Vec<V>], b: &[Vec<V>]) -> Result<(), String> {
         bb.entry(bucket_key(r)).or_default().push(r);
     }
     for (k, ra) in ba.iter_mut() {
-        let Some(rb) = bb.get_mut(k) else { return Err(format!("engine row {:?} has no counterpart in SQLite", ra[0])) };
+        let Some(rb) = bb.get_mut(k) else {
+            return Err(format!("engine row {:?} has no counterpart in SQLite", ra[0]));
+        };
         if ra.len() != rb.len() {
             return Err(format!("row group {:?}: engine has {} rows, SQLite has {}", ra[0], ra.len(), rb.len()));
         }
@@ -680,7 +697,8 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
     // odd seeds produce quote-free files (exercises the quote-free scan fast path), even seeds the full zoo
     let clean = seed % 2 == 1;
     let tabs = gen_tables(&mut rng, rows, clean);
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("difftest-data").join(format!("{name}-{seed}"));
+    let dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("difftest-data").join(format!("{name}-{seed}"));
     std::fs::create_dir_all(&dir).unwrap();
     for t in &tabs {
         write_csv(&dir, t, &mut rng, clean);
@@ -708,7 +726,12 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
         let stress = engine::run_collect_opts(
             &dir,
             &sql,
-            &engine::Options { threads: Some(3), chunk_bytes: Some(256), agg_partition_groups: Some(0), ..Default::default() },
+            &engine::Options {
+                threads: Some(3),
+                chunk_bytes: Some(256),
+                agg_partition_groups: Some(0),
+                ..Default::default()
+            },
         );
         // stream configuration: the FROM table is read as a stream (random 1..=300-byte reads, 37-byte blocks)
         // in both the default and the --no-opt engine. Queries that hit a documented streaming limit are
@@ -726,7 +749,10 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
                 Box::new(Dribble::new(&csv, seed * 1000 + qi as u64)),
             );
             match r {
-                Err(e) if e.0.contains("cannot be the right side of a LEFT JOIN") || e.0.contains("can be scanned only once") => {
+                Err(e)
+                    if e.0.contains("cannot be the right side of a LEFT JOIN")
+                        || e.0.contains("can be scanned only once") =>
+                {
                     stream_skipped += 1
                 }
                 r => {
@@ -735,22 +761,26 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
                 }
             }
         }
-        for (label, res) in [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks/forced partitioned merge", stress)]
-            .into_iter()
-            .chain(stream_runs)
+        for (label, res) in
+            [("default", fast), ("--no-opt", reference), ("3 threads/256B chunks/forced partitioned merge", stress)]
+                .into_iter()
+                .chain(stream_runs)
         {
-          match res {
-            Err(e) => failures.push(format!("[seed {seed} q{qi}] {label} engine error: {e}\n  {sql}")),
-            Ok((_, got)) => {
-                let got: Vec<Vec<V>> = got.iter().map(|r| r.iter().map(from_engine).collect()).collect();
-                if !want.is_empty() {
-                    nonempty += 1;
-                }
-                if let Err(m) = compare(&got, &want, ordered) {
-                    failures.push(format!("[seed {seed} q{qi}] MISMATCH {label} ({}): {m}\n  {sql}", if ordered { "ordered" } else { "multiset" }));
+            match res {
+                Err(e) => failures.push(format!("[seed {seed} q{qi}] {label} engine error: {e}\n  {sql}")),
+                Ok((_, got)) => {
+                    let got: Vec<Vec<V>> = got.iter().map(|r| r.iter().map(from_engine).collect()).collect();
+                    if !want.is_empty() {
+                        nonempty += 1;
+                    }
+                    if let Err(m) = compare(&got, &want, ordered) {
+                        failures.push(format!(
+                            "[seed {seed} q{qi}] MISMATCH {label} ({}): {m}\n  {sql}",
+                            if ordered { "ordered" } else { "multiset" }
+                        ));
+                    }
                 }
             }
-          }
         }
         if failures.len() >= 5 {
             break;
@@ -856,7 +886,15 @@ fn join_variants(rng: &mut Rng) -> Vec<(&'static str, Vec<Table>, bool)> {
     // sparse keys: only the high bits differ (j << 40), plus keys near the i64 limits
     let sparse_pool: Vec<i64> = (1..=40i64)
         .map(|j| j << 40)
-        .chain([0, 4_000_000_000_000_000_000, -4_000_000_000_000_000_000, 1 << 62, -(1 << 62), i64::MAX - 1, i64::MIN + 1])
+        .chain([
+            0,
+            4_000_000_000_000_000_000,
+            -4_000_000_000_000_000_000,
+            1 << 62,
+            -(1 << 62),
+            i64::MAX - 1,
+            i64::MIN + 1,
+        ])
         .collect();
     let fk = some((0..300).map(|_| *rng.pick(&sparse_pool)).collect());
     let dk = some(sparse_pool.clone());
@@ -909,7 +947,8 @@ fn difftest_join_key_cases() {
     let mut failures = Vec::new();
     let (mut compared, mut nonempty) = (0usize, 0usize);
     for (name, tabs, big) in join_variants(&mut rng) {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("difftest-data").join(format!("join-{name}"));
+        let dir =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("difftest-data").join(format!("join-{name}"));
         std::fs::create_dir_all(&dir).unwrap();
         for t in &tabs {
             write_csv(&dir, t, &mut rng, true);
@@ -917,7 +956,8 @@ fn difftest_join_key_cases() {
         write_schema(&dir, &tabs);
         let conn = load_sqlite(&tabs);
         // (ON clause, runs on the integer path?)
-        let mut ons: Vec<(&str, bool)> = vec![("f.k = d.k", true), ("f.ks = d.ks", false), ("f.k = d.k AND f.k2 = d.k2", false)];
+        let mut ons: Vec<(&str, bool)> =
+            vec![("f.k = d.k", true), ("f.ks = d.ks", false), ("f.k = d.k AND f.k2 = d.k2", false)];
         if !big {
             ons.push(("f.dt = d.dt", true));
             ons.push(("f.dc = d.dc", true));
@@ -940,7 +980,10 @@ fn difftest_join_key_cases() {
         let chunk = if big { 64 * 1024 } else { 200 };
         let mut configs: Vec<(String, engine::Options)> = vec![("default".into(), engine::Options::default())];
         for t in [1, 2, 4] {
-            configs.push((format!("{t} threads/{chunk}B chunks"), engine::Options { threads: Some(t), chunk_bytes: Some(chunk), ..Default::default() }));
+            configs.push((
+                format!("{t} threads/{chunk}B chunks"),
+                engine::Options { threads: Some(t), chunk_bytes: Some(chunk), ..Default::default() },
+            ));
         }
         configs.push(("--no-opt".into(), engine::Options { no_opt: true, ..Default::default() }));
         for shape in &shapes {

@@ -26,7 +26,9 @@ fn main() {
             "--progress" => show_progress = true,
             "--table" => table_mode = true,
             "--serve" => serve = true,
-            "--port" => port = args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| die("--port needs a port number")),
+            "--port" => {
+                port = args.next().and_then(|v| v.parse().ok()).unwrap_or_else(|| die("--port needs a port number"))
+            }
             "--shell" | "-i" => force_shell = true,
             "--file" | "-f" => file = Some(args.next().unwrap_or_else(|| die("--file needs a path"))),
             "--cache" => die("--cache is not implemented yet (M6)"),

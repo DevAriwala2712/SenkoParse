@@ -8,8 +8,8 @@ use crate::types::*;
 use crate::{err, Result};
 use memchr::{memchr, memchr2};
 use memmap2::Mmap;
-use std::path::Path;
 use rayon::prelude::*;
+use std::path::Path;
 use std::sync::Arc;
 
 pub mod stream;
@@ -283,7 +283,13 @@ impl CsvSource {
 
     /// Parse the header at the start of `data` (file mode: the whole map; stream mode: the first block).
     /// `label` names the input in error messages (the file path, or `<stdin>`).
-    pub fn from_data(data: Data, table: &TableDef, needed: &[usize], reference: bool, pstr: String) -> Result<CsvSource> {
+    pub fn from_data(
+        data: Data,
+        table: &TableDef,
+        needed: &[usize],
+        reference: bool,
+        pstr: String,
+    ) -> Result<CsvSource> {
         let d: &[u8] = bytes(&data);
         let mut pos = if d.starts_with(&[0xEF, 0xBB, 0xBF]) { 3 } else { 0 };
         let mut header = Vec::new();
@@ -300,11 +306,10 @@ impl CsvSource {
         let mut wanted = vec![None; header.len()];
         let mut seen = vec![false; table.cols.len()];
         for (fi, h) in header.iter().enumerate() {
-            let si = table
-                .cols
-                .iter()
-                .position(|(n, _)| n == h)
-                .ok_or_else(|| err!("{pstr}: header column '{h}' is not in schema.toml for table '{}'", table.name))?;
+            let si =
+                table.cols.iter().position(|(n, _)| n == h).ok_or_else(|| {
+                    err!("{pstr}: header column '{h}' is not in schema.toml for table '{}'", table.name)
+                })?;
             if seen[si] {
                 return Err(err!("{pstr}: duplicate header column '{h}'"));
             }
@@ -529,7 +534,12 @@ impl CsvReader {
             };
             let nfields = count_commas(line) + 1;
             if nfields != self.ncols {
-                return Err(err!("{}: row {}: expected {} fields, found {nfields}", self.path, self.row + 2, self.ncols));
+                return Err(err!(
+                    "{}: row {}: expected {} fields, found {nfields}",
+                    self.path,
+                    self.row + 2,
+                    self.ncols
+                ));
             }
             if let Some(last) = self.last_needed {
                 let mut p = 0usize;

@@ -38,7 +38,10 @@ fn quoting_newlines_crlf_and_missing_final_newline() {
     assert_eq!(r[2][1], s("line1\nline2"));
     assert_eq!(r[3][1], s("x\r\ny"));
     assert_eq!(r[4][1], Value::Null); // empty field = NULL
-    assert_eq!(q(&d, "SELECT COUNT(*), COUNT(v), SUM(v) FROM t")[0], vec![Value::I64(5), Value::I64(4), Value::I64(130)]);
+    assert_eq!(
+        q(&d, "SELECT COUNT(*), COUNT(v), SUM(v) FROM t")[0],
+        vec![Value::I64(5), Value::I64(4), Value::I64(130)]
+    );
 }
 
 #[test]
@@ -64,7 +67,10 @@ fn null_keys_never_join() {
 #[test]
 fn empty_table_aggregates() {
     let d = dir("empty", &[("t.csv", "id,s,v\n")], T);
-    assert_eq!(q(&d, "SELECT COUNT(*), SUM(v), AVG(v), MIN(v) FROM t")[0], vec![Value::I64(0), Value::Null, Value::Null, Value::Null]);
+    assert_eq!(
+        q(&d, "SELECT COUNT(*), SUM(v), AVG(v), MIN(v) FROM t")[0],
+        vec![Value::I64(0), Value::Null, Value::Null, Value::Null]
+    );
     assert!(q(&d, "SELECT s, COUNT(*) FROM t GROUP BY s").is_empty());
 }
 

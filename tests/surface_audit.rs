@@ -170,7 +170,11 @@ fn compare(got: &[Vec<V>], want: &[Vec<V>], ordered: bool) -> Result<(), String>
     for a in got {
         match (0..want.len()).find(|&j| !used[j] && row_eq(a, &want[j])) {
             Some(j) => used[j] = true,
-            None => return Err(format!("engine row {a:?} has no SQLite counterpart\n  engine: {got:?}\n  sqlite: {want:?}")),
+            None => {
+                return Err(format!(
+                    "engine row {a:?} has no SQLite counterpart\n  engine: {got:?}\n  sqlite: {want:?}"
+                ))
+            }
         }
     }
     Ok(())
@@ -214,7 +218,12 @@ fn supported_vs(sql: &str, sqlite_sql: &str) -> Vec<String> {
         ("--no-opt", engine::Options { no_opt: true, ..Default::default() }),
         (
             "3 threads/16B chunks/partitioned merge",
-            engine::Options { threads: Some(3), chunk_bytes: Some(16), agg_partition_groups: Some(0), ..Default::default() },
+            engine::Options {
+                threads: Some(3),
+                chunk_bytes: Some(16),
+                agg_partition_groups: Some(0),
+                ..Default::default()
+            },
         ),
     ];
     let mut names = None;
@@ -227,7 +236,8 @@ fn supported_vs(sql: &str, sqlite_sql: &str) -> Vec<String> {
         names.get_or_insert(n);
     }
     // stream mode: the FROM table is read through 1-byte reads and 7-byte blocks
-    let ftable = sql.split(" FROM ").nth(1).and_then(|r| r.split_whitespace().next()).unwrap().trim_end_matches(',').to_string();
+    let ftable =
+        sql.split(" FROM ").nth(1).and_then(|r| r.split_whitespace().next()).unwrap().trim_end_matches(',').to_string();
     let csv = std::fs::read(d.join(format!("{ftable}.csv"))).unwrap();
     for no_opt in [false, true] {
         let o = engine::Options { chunk_bytes: Some(7), no_opt, ..Default::default() };

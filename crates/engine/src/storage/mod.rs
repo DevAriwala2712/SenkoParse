@@ -47,7 +47,8 @@ impl Catalog {
                 cur = Some(name);
                 continue;
             }
-            let (k, v) = line.split_once('=').ok_or_else(|| err!("schema.toml:{}: expected `col = \"type\"`", ln + 1))?;
+            let (k, v) =
+                line.split_once('=').ok_or_else(|| err!("schema.toml:{}: expected `col = \"type\"`", ln + 1))?;
             let v = v.trim().trim_matches('"').trim_matches('\'');
             let ty = Ty::parse(v).ok_or_else(|| err!("schema.toml:{}: unknown type '{v}'", ln + 1))?;
             let t = tables

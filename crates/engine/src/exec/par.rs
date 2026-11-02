@@ -152,7 +152,9 @@ pub fn build_par(plan: &Plan, ctx: &Arc<ExecCtx>) -> Result<Box<dyn Op>> {
                 },
                 // e.g. HAVING / projection over an aggregate: cheap, stays serial
                 Node::Filter { input, pred } => Box::new(Filter { input: build_par(input, ctx)?, pred: pred.clone() }),
-                Node::Project { input, exprs } => Box::new(Project { input: build_par(input, ctx)?, exprs: exprs.clone() }),
+                Node::Project { input, exprs } => {
+                    Box::new(Project { input: build_par(input, ctx)?, exprs: exprs.clone() })
+                }
                 Node::Join { left, right, kind, lkeys, rkeys, build_left } => Box::new(HashJoin::new(
                     build_par(left, ctx)?,
                     build_par(right, ctx)?,

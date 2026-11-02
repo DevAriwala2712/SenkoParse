@@ -92,11 +92,7 @@ fn resolve(schema: &[Field], q: &Option<String>, name: &str) -> Result<usize> {
         .collect();
     match hits.len() {
         1 => Ok(hits[0]),
-        0 => Err(err!(
-            "unknown column '{}{}'",
-            q.as_ref().map(|q| format!("{q}.")).unwrap_or_default(),
-            name
-        )),
+        0 => Err(err!("unknown column '{}{}'", q.as_ref().map(|q| format!("{q}.")).unwrap_or_default(), name)),
         _ => Err(err!("ambiguous column '{name}' (qualify it with a table alias)")),
     }
 }
@@ -131,7 +127,9 @@ fn cast_to(e: BExpr, to: Ty) -> BExpr {
             (Value::I64(x), Ty::F64) => Some(Value::F64(*x as f64)),
             (Value::I64(x), Ty::Dec(s)) => x.checked_mul(POW10[s as usize]).map(|r| Value::Dec(r, s)),
             (Value::Dec(x, a), Ty::F64) => Some(Value::F64(*x as f64 / POW10[*a as usize] as f64)),
-            (Value::Dec(x, a), Ty::Dec(b)) if b >= *a => x.checked_mul(POW10[(b - a) as usize]).map(|r| Value::Dec(r, b)),
+            (Value::Dec(x, a), Ty::Dec(b)) if b >= *a => {
+                x.checked_mul(POW10[(b - a) as usize]).map(|r| Value::Dec(r, b))
+            }
             _ => None,
         };
         if let Some(v) = folded {
@@ -339,7 +337,9 @@ impl AggCtx<'_> {
             Ast::Num(_) | Ast::Str(_) | Ast::Null => bind_expr(a, self.from)?,
             Ast::Col { q, name } => {
                 resolve(self.from, q, name)?;
-                return Err(err!("column '{name}' must appear in the GROUP BY clause or be used in an aggregate function"));
+                return Err(err!(
+                    "column '{name}' must appear in the GROUP BY clause or be used in an aggregate function"
+                ));
             }
             Ast::Bin(op, l, r) => {
                 let (l, r) = (self.bind_post(l)?, self.bind_post(r)?);
@@ -394,7 +394,9 @@ fn scan(tr: &TableRef, cat: &Catalog, refs: &[(Option<String>, String)], all: bo
         .cols
         .iter()
         .enumerate()
-        .filter(|(_, (n, _))| all || refs.iter().any(|(q, rn)| rn == n && (q.is_none() || q.as_deref() == Some(alias.as_str()))))
+        .filter(|(_, (n, _))| {
+            all || refs.iter().any(|(q, rn)| rn == n && (q.is_none() || q.as_deref() == Some(alias.as_str())))
+        })
         .map(|(i, _)| i)
         .collect();
     let schema = cols
@@ -452,7 +454,10 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
                 }
                 conj = rest;
                 if lk.is_empty() {
-                    return Err(err!("comma join of '{}' needs an equality condition in WHERE (cross joins are unsupported)", j.table.name));
+                    return Err(err!(
+                        "comma join of '{}' needs an equality condition in WHERE (cross joins are unsupported)",
+                        j.table.name
+                    ));
                 }
             }
             JoinKind::Inner | JoinKind::Left => {
@@ -534,7 +539,11 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
             let g = match g {
                 Ast::Num(n) => {
                     let k: usize = n.parse().map_err(|_| err!("bad GROUP BY ordinal"))?;
-                    items.get(k.wrapping_sub(1)).ok_or_else(|| err!("GROUP BY position {k} is out of range"))?.expr.clone()
+                    items
+                        .get(k.wrapping_sub(1))
+                        .ok_or_else(|| err!("GROUP BY position {k} is out of range"))?
+                        .expr
+                        .clone()
                 }
                 Ast::Col { q: None, name } if resolve(&from_schema, &None, name).is_err() => items
                     .iter()
@@ -602,9 +611,17 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
     // 6. assemble operators
     if is_agg {
         let nk = actx.keys.len();
-        let mut schema: Vec<Field> =
-            actx.keys.iter().enumerate().map(|(i, k)| Field { qual: None, name: format!("key{i}"), ty: k.ty() }).collect();
-        schema.extend(actx.aggs.iter().enumerate().map(|(i, a)| Field { qual: None, name: format!("agg{i}"), ty: a.out_ty }));
+        let mut schema: Vec<Field> = actx
+            .keys
+            .iter()
+            .enumerate()
+            .map(|(i, k)| Field { qual: None, name: format!("key{i}"), ty: k.ty() })
+            .collect();
+        schema.extend(actx.aggs.iter().enumerate().map(|(i, a)| Field {
+            qual: None,
+            name: format!("agg{i}"),
+            ty: a.out_ty,
+        }));
         debug_assert_eq!(schema.len(), nk + actx.aggs.len());
         let est = plan.est;
         plan = Plan { node: Node::Aggregate { input: Box::new(plan), keys: actx.keys, aggs: actx.aggs }, schema, est };
@@ -618,7 +635,11 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
     let schema: Vec<Field> = outs
         .iter()
         .enumerate()
-        .map(|(i, e)| Field { qual: None, name: names.get(i).cloned().unwrap_or_else(|| format!("_order{i}")), ty: e.ty() })
+        .map(|(i, e)| Field {
+            qual: None,
+            name: names.get(i).cloned().unwrap_or_else(|| format!("_order{i}")),
+            ty: e.ty(),
+        })
         .collect();
     let est = plan.est;
     plan = Plan { node: Node::Project { input: Box::new(plan), exprs: outs }, schema, est };

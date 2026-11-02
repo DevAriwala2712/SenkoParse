@@ -32,8 +32,7 @@ impl Op for Filter {
         while let Some(b) = self.input.next()? {
             let p = eval(&self.pred, &b)?;
             let ColData::Bool(v) = &p.data else { unreachable!() };
-            let idx: Vec<u32> =
-                (0..b.len).filter(|&i| v[i] && !p.is_null(i)).map(|i| i as u32).collect();
+            let idx: Vec<u32> = (0..b.len).filter(|&i| v[i] && !p.is_null(i)).map(|i| i as u32).collect();
             if idx.len() == b.len {
                 return Ok(Some(b));
             }
