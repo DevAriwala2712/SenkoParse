@@ -1,0 +1,39 @@
+# PR fast lane (docs/production-readiness.md §11.1, Phase 0 task 0.5).
+# fmt and tests must pass. Clippy runs without -D warnings because 6 known warnings remain
+# (docs/status.md, "Open items"); make it -D warnings once they are fixed.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt, clippy, test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+      - name: cargo clippy --all-targets
+        run: cargo clippy --all-targets
+      - name: cargo test
+        run: cargo test
