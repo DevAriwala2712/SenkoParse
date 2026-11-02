@@ -97,7 +97,7 @@ pub fn thousands(n: u64) -> String {
     let s = n.to_string();
     let mut o = String::new();
     for (i, ch) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             o.push(',');
         }
         o.push(ch);
@@ -267,7 +267,7 @@ fn panel(v: &View, e: &Eng, pw: usize) -> Vec<String> {
         let _ = live;
         out.push(side(String::new()));
     }
-    out.push(fit(&format!("{}", c(v, DIM, &format!("╰{}╯", "─".repeat(iw)))), pw));
+    out.push(fit(&c(v, DIM, &format!("╰{}╯", "─".repeat(iw))).to_string(), pw));
     out
 }
 

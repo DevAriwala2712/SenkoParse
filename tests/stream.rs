@@ -5,7 +5,7 @@ use common::Dribble;
 use engine::types::Value;
 use engine::Options;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 type Rows = Vec<Vec<Value>>;
 
@@ -19,16 +19,16 @@ fn dir(name: &str, files: &[(&str, &str)], schema: &str) -> PathBuf {
     d
 }
 
-fn file_run(d: &PathBuf, sql: &str, o: Options) -> Result<Rows, String> {
+fn file_run(d: &Path, sql: &str, o: Options) -> Result<Rows, String> {
     engine::run_collect_opts(d, sql, &o).map(|r| r.1).map_err(|e| e.0)
 }
 
-fn stream_run(d: &PathBuf, sql: &str, table: &str, input: Box<dyn Read + Send>, o: Options) -> Result<Rows, String> {
+fn stream_run(d: &Path, sql: &str, table: &str, input: Box<dyn Read + Send>, o: Options) -> Result<Rows, String> {
     engine::run_collect_stream(d, sql, &o, table, input).map(|r| r.1).map_err(|e| e.0)
 }
 
 /// File-mode error text mentions the file path; stream mode says `<stdin>`.
-fn unlabel(d: &PathBuf, table: &str, e: String) -> String {
+fn unlabel(d: &Path, table: &str, e: String) -> String {
     e.replace(&d.join(format!("{table}.csv")).display().to_string(), "<stdin>")
 }
 
@@ -41,7 +41,7 @@ fn sorted(mut r: Rows) -> Vec<String> {
 const T3: &str = "[t]\nid = \"i64\"\ns = \"str\"\nv = \"i64\"\n";
 
 /// Stream `csv` as table `t` of `d` through every read pattern and block size; each must equal file mode.
-fn check_all(d: &PathBuf, csv: &str, sql: &str, order_matters: bool) {
+fn check_all(d: &Path, csv: &str, sql: &str, order_matters: bool) {
     let want = file_run(d, sql, Options { no_opt: true, ..Default::default() }).map_err(|e| unlabel(d, "t", e));
     let fast = file_run(d, sql, Options::default()).map_err(|e| unlabel(d, "t", e));
     assert_eq!(fast, want, "file mode default vs --no-opt: {sql}");

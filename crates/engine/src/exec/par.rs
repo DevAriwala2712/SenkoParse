@@ -58,7 +58,7 @@ impl ExecCtx {
     }
 
     pub fn is_stream(&self, table: &str) -> bool {
-        self.stream.as_ref().map_or(false, |s| s.table == table)
+        self.stream.as_ref().is_some_and(|s| s.table == table)
     }
 
     /// Run `f` on this query's thread pool (the global rayon pool unless `--threads` was given).

@@ -1,6 +1,6 @@
 //! Hand-written edge cases for the CSV layer, NULL semantics and error reporting.
 use engine::types::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn dir(name: &str, files: &[(&str, &str)], schema: &str) -> PathBuf {
     let d = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target").join("edge-data").join(name);
@@ -12,10 +12,10 @@ fn dir(name: &str, files: &[(&str, &str)], schema: &str) -> PathBuf {
     d
 }
 
-fn q(d: &PathBuf, sql: &str) -> Vec<Vec<Value>> {
+fn q(d: &Path, sql: &str) -> Vec<Vec<Value>> {
     engine::run_collect(d, sql).unwrap_or_else(|e| panic!("{sql}: {e}")).1
 }
-fn err(d: &PathBuf, sql: &str) -> String {
+fn err(d: &Path, sql: &str) -> String {
     match engine::run_collect(d, sql) {
         Ok(_) => panic!("expected error for: {sql}"),
         Err(e) => e.0,

@@ -22,7 +22,10 @@ use std::path::{Path, PathBuf};
 // ----------------------------------------------------------------------------- data
 
 /// (table, columns with schema type, CSV body). No quoting in the data, so the same text loads into SQLite.
-const TABLES: &[(&str, &[(&str, &str)], &str)] = &[
+/// (column name, schema type)
+type Cols = &'static [(&'static str, &'static str)];
+
+const TABLES: &[(&str, Cols, &str)] = &[
     (
         "t",
         &[("id", "i64"), ("s", "str"), ("v", "i64"), ("p", "decimal(2)"), ("f", "f64"), ("d", "date")],

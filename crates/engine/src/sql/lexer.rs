@@ -61,7 +61,7 @@ pub fn lex(s: &str) -> Result<Vec<Token>> {
                 }
             }
             Tok::Ident(String::from_utf8_lossy(&name).to_ascii_lowercase())
-        } else if c.is_ascii_digit() || (c == b'.' && b.get(i + 1).map_or(false, |d| d.is_ascii_digit())) {
+        } else if c.is_ascii_digit() || (c == b'.' && b.get(i + 1).is_some_and(|d| d.is_ascii_digit())) {
             while i < b.len() && (b[i].is_ascii_digit() || b[i] == b'.') {
                 i += 1;
             }

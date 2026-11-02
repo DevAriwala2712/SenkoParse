@@ -103,7 +103,7 @@ fn place(plan: Plan, table: &str) -> Result<Plan> {
 pub fn build_serial(plan: Plan, opts: &Options, stream: Option<&Arc<StreamInput>>) -> Result<Box<dyn Op>> {
     let types: Vec<Ty> = plan.schema.iter().map(|f| f.ty).collect();
     Ok(match plan.node {
-        Node::Scan { table, cols } if stream.map_or(false, |s| s.table == table.name) => match stream.unwrap().take() {
+        Node::Scan { table, cols } if stream.is_some_and(|s| s.table == table.name) => match stream.unwrap().take() {
             Some(r) => Box::new(StreamScan::new(r, table, cols, true, opts.chunk_bytes)),
             None => Box::new(EmptyScan),
         },

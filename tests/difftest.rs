@@ -15,7 +15,7 @@ use engine::types::{fmt_date, fmt_dec, Value};
 use rusqlite::{types::Value as SqlVal, types::ValueRef, Connection};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // ----------------------------------------------------------------------------- rng
 
@@ -168,7 +168,7 @@ fn cell_text(c: &Cell) -> String {
     String::from_utf8(b).unwrap()
 }
 
-fn write_csv(dir: &PathBuf, t: &Table, rng: &mut Rng, clean: bool) {
+fn write_csv(dir: &Path, t: &Table, rng: &mut Rng, clean: bool) {
     let eol = if rng.chance(40) { "\r\n" } else { "\n" };
     let final_nl = rng.chance(60);
     let mut out = String::new();
@@ -196,7 +196,7 @@ fn write_csv(dir: &PathBuf, t: &Table, rng: &mut Rng, clean: bool) {
     std::fs::write(dir.join(format!("{}.csv", t.name)), out).unwrap();
 }
 
-fn write_schema(dir: &PathBuf, tables: &[Table]) {
+fn write_schema(dir: &Path, tables: &[Table]) {
     let mut s = String::new();
     for t in tables {
         writeln!(s, "[{}]", t.name).unwrap();
@@ -328,7 +328,7 @@ fn pred(rng: &mut Rng, sc: &[Col], depth: u32) -> String {
     let strs: Vec<&Col> = sc.iter().filter(|c| c.ty == K::S).collect();
     let dates: Vec<&Col> = sc.iter().filter(|c| c.ty == K::Dt).collect();
     match rng.below(7) {
-        0 | 1 | 2 if !num_cols(sc).is_empty() => {
+        0..=2 if !num_cols(sc).is_empty() => {
             let l = num_expr(rng, sc, 2);
             let r = if rng.chance(50) { num_lit(rng) } else { num_expr(rng, sc, 1) };
             // The oracle keeps decimals as REAL, so derived values (x*y, x/y, sums) carry float error
@@ -431,7 +431,7 @@ fn build(rng: &mut Rng, from: &str, sc: &[Col], mut conds: Vec<String>) -> (Stri
         items.extend(aggs.iter().cloned());
         if rng.chance(25) {
             // expression over a key and an aggregate
-            items.push(format!("COUNT(*) + 1"));
+            items.push("COUNT(*) + 1".to_string());
         }
         let mut sql = format!("SELECT {} FROM {from}{where_} GROUP BY {}", items.join(", "), keys.join(", "));
         if rng.chance(30) {
@@ -477,7 +477,7 @@ fn gen_query(rng: &mut Rng, tabs: &[Table]) -> (String, bool) {
             let sc = scope_of(d, "");
             build(rng, "dim", &sc, vec![])
         }
-        3 | 4 | 5 => {
+        3..=5 => {
             // facts x dim, a variety of key shapes (int/int, reversed, two keys, int/int via v, decimal scale 2 vs 1)
             let on = match rng.below(5) {
                 0 | 1 => "f.k = d.id".to_string(),

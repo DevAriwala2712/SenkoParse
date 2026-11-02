@@ -128,7 +128,7 @@ fn binary(op: BinOp, a: &Column, b: &Column) -> Result<Column> {
                 let f = |i: usize| x.get(i).cmp(y.get(i));
                 let mut out = Vec::with_capacity(n);
                 for i in 0..n {
-                    if nl.map_or(false, |m| m[i]) {
+                    if nl.is_some_and(|m| m[i]) {
                         out.push(false);
                         continue;
                     }

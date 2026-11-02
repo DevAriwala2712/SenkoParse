@@ -118,7 +118,7 @@ pub fn run(s: &Session, sql: &str, keep: Option<usize>) -> engine::Result<Shown>
     let mut total = 0usize;
     while let Some(b) = p.root.next()? {
         for i in 0..b.len {
-            if keep.map_or(true, |k| rows.len() < k) {
+            if keep.is_none_or(|k| rows.len() < k) {
                 rows.push(b.cols.iter().map(|c| cell(&c.value(i))).collect());
             }
         }
@@ -279,7 +279,7 @@ fn print_schema(s: &Session, which: Option<&str>) {
             let want = which.map(|w| w.to_ascii_lowercase());
             let mut found = false;
             for n in names {
-                if want.as_ref().map_or(false, |w| *w != n) {
+                if want.as_ref().is_some_and(|w| *w != n) {
                     continue;
                 }
                 found = true;

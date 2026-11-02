@@ -165,7 +165,7 @@ pub fn build_int_table(op: &mut dyn Op, keys: &[BExpr], types: &[Ty], ctx: &Exec
                 let (lo, hi) = (r * INT_RANGE_ROWS, ((r + 1) * INT_RANGE_ROWS).min(n));
                 let mut b: Vec<Vec<u32>> = (0..np).map(|_| Vec::with_capacity((hi - lo) / np + 8)).collect();
                 for i in lo..hi {
-                    if nulls.map_or(false, |nn| nn[i]) {
+                    if nulls.is_some_and(|nn| nn[i]) {
                         continue;
                     }
                     let p = if pbits == 0 { 0 } else { (mix(kv[i]) >> (64 - pbits)) as usize };
@@ -231,7 +231,7 @@ fn probe_ints(
 ) {
     for i in 0..n {
         let mut matched = false;
-        if !nulls.map_or(false, |nn| nn[i]) {
+        if !nulls.is_some_and(|nn| nn[i]) {
             let mut r = ij.lookup(get(i));
             if r != NIL {
                 matched = true;

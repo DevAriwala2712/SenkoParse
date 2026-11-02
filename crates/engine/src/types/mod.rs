@@ -410,7 +410,7 @@ impl Column {
         }
         match (&mut self.nulls, &o.nulls) {
             (None, None) => {}
-            (Some(a), None) => a.extend(std::iter::repeat(false).take(o.len())),
+            (Some(a), None) => a.extend(std::iter::repeat_n(false, o.len())),
             (Some(a), Some(b)) => a.extend_from_slice(b),
             (None, Some(b)) => {
                 let mut a = vec![false; n];
@@ -461,7 +461,7 @@ impl Column {
             }
         };
         let nulls = if idx.contains(&NONE_IDX) || self.nulls.is_some() {
-            Some(idx.iter().map(|&i| i == NONE_IDX || self.nulls.as_ref().map_or(false, |n| n[i as usize])).collect())
+            Some(idx.iter().map(|&i| i == NONE_IDX || self.nulls.as_ref().is_some_and(|n| n[i as usize])).collect())
         } else {
             None
         };
