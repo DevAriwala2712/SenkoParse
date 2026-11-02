@@ -1,6 +1,6 @@
 # Status board
 
-One page that says what is true **today** (2026-10-31), how we know, and what is open.
+One page that says what is true **today** (2026-11-01), how we know, and what is open.
 Legend: ✅ verified · 🟡 partly verified or narrow scope · ⚪ not done / not measured · ❌ failed
 
 ```mermaid
@@ -9,10 +9,10 @@ flowchart LR
     classDef part fill:#fdf0cc,stroke:#eda100,color:#0b0b0b
     classDef todo fill:#ececea,stroke:#8a8984,color:#0b0b0b
     M1["M1<br/>correct baseline"]:::done --> M2["M2<br/>parallel scan"]:::done
-    M2 --> M3["M3<br/>specialization<br/>(int-key table done;<br/>dense-key join not)"]:::part
-    M3 --> M4["M4<br/>eager aggregation"]:::todo
+    M2 --> M3["M3<br/>int-key table done"]:::part
+    M3 --> M4["P1-P5<br/>diagnose, adaptive chunks,<br/>dense join, dense GROUP BY,<br/>re-benchmark"]:::todo
     M1 --> S1["Stream: verify"]:::done --> S2["Stream: memory proof<br/>(one query)"]:::part --> S3["Stream: demo"]:::todo --> S4["IN (SELECT ...)"]:::todo
-    M4 --> M6["M6<br/>columnar cache"]:::todo --> SP["Spill"]:::todo
+    M4 --> SP["Spill<br/>(only if time)"]:::todo
 ```
 
 ## Milestones
@@ -23,10 +23,14 @@ flowchart LR
 | M2 parallel chunked scan, fixed-order merge | ✅ | [EXP-003](experiments/003-parallel-chunked-scan.md) |
 | Quote-free fast path | ✅ | [EXP-002](experiments/002-quote-free-fast-path.md) |
 | Integer-key aggregation, partition-wise merge | ✅ merged | [EXP-004](experiments/004-integer-key-aggregation.md) |
-| M3 rest: dense-key array join, parallel join build | ⚪ deferred (EXP-005, "Later") | [ADR-0001](adr/0001-parallel-and-fast-path-execution.md) |
-| M4 eager aggregation, M5 fused loops | ⚪ not started | |
-| M6 columnar cache (`--cache`) | ⚪ not implemented | |
-| Spill (Grace hash partitioning) | ⚪ not implemented | |
+| **P1** Diagnose superlinear scaling (Q3, Q5, Q9 at 1e8): merge cost vs memory pressure | ⚪ **next, ~30 min** | cheapest test: `--chunk-bytes 256MiB` on Q3/Q5, scaling curve 1e7/3e7/1e8, `vm_stat` swap |
+| **P2** Adaptive aggregation chunk size (from file size and group-count estimate, never from thread count) | ⚪ planned, ~45 min | merge work grows with chunks x groups; [BENCHMARKS](../BENCHMARKS.md) 1e8 section |
+| **P3** Dense-key direct-addressed join (replaces M3 "rest"): array build + probe when the integer key range is small, hash fallback otherwise | ⚪ planned, ~2 h | Q9 is 16x slower than DuckDB; Q8 1.6x |
+| **P4** Dense-key GROUP BY and bitset `COUNT(DISTINCT)` for small-range integer keys | ⚪ planned, ~1 h | Q3 3.0x, Q4 3.6x, Q5 3.5x |
+| **P5** Re-run 1e8 benchmark (warm + cold), update claims C12/C13 | ⚪ planned, ~45 min | needs `sudo purge` for cold |
+| M4 eager aggregation, M5 fused loops | ⛔ dropped for now | Q7 already ties DuckDB (0.95x); scan-bound queries tie (Q1, Q2, Q6) |
+| M6 columnar cache (`--cache`) | ⛔ dropped for now | helps repeat runs only; cold path must be fast; stale-cache risk |
+| Spill (Grace hash partitioning) | ⚪ deferred, only if time remains after P5 | robustness, not speed |
 
 ## Streaming plan ([CLAUDE.md](../CLAUDE.md))
 

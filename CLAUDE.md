@@ -24,6 +24,9 @@ Strategy and rationale live in `docs/strategy.md` (an export of the team's Claud
 cargo build --release
 cargo test                                   # unit + differential tests (small data); checks default, --no-opt and tiny-chunk parallel paths
 ./target/release/qe --data data/ "SELECT ..." # run one query, CSV result to stdout
+./target/release/qe --data data/               # interactive shell (qe> prompt): .tables .schema .queries .q N .read FILE .mode .limit .timer .help
+./target/release/qe --data data/ --table "SELECT ..."          # one query as a MySQL-style table with row count and time
+./target/release/qe --data data/ --file queries/benchmark.sql --table   # run every statement in a file (Q1-Q9 live in queries/benchmark.sql)
 #   --no-opt          single-threaded reference path (no fast paths); everything else must match it
 #   --threads N       worker threads (default: all cores); results never depend on N
 #   --chunk-bytes N   scan chunk size (default 16 MiB); results never depend on N
@@ -80,7 +83,17 @@ Operators process batches of columns (vectorized), not one row at a time. Keep a
 4. **Demo**: the `gunzip -c ... | qe --stdin` pipeline, side by side with DuckDB.
 5. **Optional: `IN (SELECT ...)`** (a real semi-join, so no unique-key caveat).
 
-### Later (old speed plan; only after the streaming steps above)
+### Current plan (2026-11-01, about 5 h budget; replaces the old milestone order)
+Why: at 1e8 rows (5.55 GB per table, M3 Pro) file mode ties DuckDB on scan-bound queries (Q1, Q2, Q6, Q7: 0.79-0.95x) but loses Q3 3.0x, Q4 3.6x, Q5 3.5x, Q8 1.6x, Q9 16x (C12 failed, see `BENCHMARKS.md`). Several queries scale far worse than 10x from 1e7 to 1e8 (Q3 0.13 s to 5.8 s, Q9 1.5 s to 85 s), which points at one specific cost, not general slowness. Streaming (ADR-0002) stays the headline differentiator; file-mode speed on grouped and joined queries is back in scope for this plan only.
+1. **P1 diagnose (~30 min).** `--chunk-bytes 268435456` on Q3/Q5; scaling curve at 1e7/3e7/1e8; check swap with `vm_stat`; profile Q3 and Q9. Hypothesis: per-chunk group tables make merge work grow as chunks x groups (about 100x for 10x data). Kill it if bigger chunks change nothing.
+2. **P2 adaptive chunk size (~45 min).** Choose the aggregation chunk size from file size and an estimated group count, never from the thread count, so results stay thread-independent.
+3. **P3 dense-key join (~2 h).** If the build key is an integer column whose min/max range is within a small multiple of the row count, build a direct-addressed array (parallel, no locks, unique keys) and probe by index; otherwise the existing hash join. Verify uniqueness during build, fall back if not unique. Difftest must cover sparse, negative, NULL and duplicate keys.
+4. **P4 dense GROUP BY and bitset COUNT(DISTINCT) (~1 h).** Same range test; array of accumulators indexed by key; per-group bitset when the distinct column is a small-range integer (merge = OR).
+5. **P5 re-benchmark (~45 min).** `python3 bench/file_vs_duckdb.py` warm and cold (cold needs `sudo purge`), update `BENCHMARKS.md` and claims C12/C13.
+Rules for all steps: differential test stays green; the fast paths are chosen from the data (measured range), not hard-coded to the generator; every claim needs a before/after row in `BENCHMARKS.md`.
+Dropped for now: M4 eager aggregation, M5 fused loops, M6 columnar cache, `IN (SELECT ...)`. Deferred: spill.
+
+### Later (old speed plan; superseded by the current plan above where they overlap)
 EXP-005 parallel build / dense-key array join (1e7 x 1e7 join), exact-decimal sums, `COUNT(DISTINCT)` rewrite, top-N for `ORDER BY ... LIMIT`, filter pushdown, then the milestones below. The `--stdin` single-threaded parse limit also belongs here.
 
 Old milestone list, kept for reference:
