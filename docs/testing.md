@@ -37,7 +37,7 @@ flowchart LR
 ```bash
 cargo test                                          # 23 tests + 1 ignored, ~45 s in debug
 cargo test --test stream                            # one suite
-cargo test --release --test difftest -- --ignored  # large randomized run (env: DIFFTEST_SEED / ROWS / QUERIES)
+DIFFTEST_STREAM_BLOCK=4096 cargo test --release --test difftest -- --ignored  # large run, seeds 1000-1002 (env: DIFFTEST_SEED / ROWS / QUERIES / STREAM_BLOCK)
 ```
 
 Current state (2026-10-31): `cargo test` → **23 passed, 0 failed, 1 ignored** (the large difftest), no warnings.
@@ -89,7 +89,7 @@ Current state (2026-10-31): `cargo test` → **23 passed, 0 failed, 1 ignored** 
 | 1 | default (parallel, 16 MiB chunks) | what users run |
 | 2 | `--no-opt` reference | the oracle for fast paths |
 | 3 | 3 threads, 256-byte chunks, forced partitioned merge | splits land inside quoted fields and CRLF pairs; every aggregation strategy is exercised |
-| 4 | stream, 1–300 byte random reads, 37-byte blocks | stream mode with block boundaries everywhere |
+| 4 | stream, 1–300 byte random reads, 37-byte blocks (`DIFFTEST_STREAM_BLOCK` overrides; the large run uses 4096) | stream mode with block boundaries everywhere |
 | 5 | stream + `--no-opt` | the serial stream path |
 
   For the stream configurations the FROM table is streamed. Queries that hit a documented streaming limit (stream on the right of a `LEFT JOIN`, or the same table twice) are **skipped and counted**, not hidden.
@@ -100,7 +100,8 @@ Current state (2026-10-31): `cargo test` → **23 passed, 0 failed, 1 ignored** 
 |---|---|---|---|
 | `difftest_small`, seeds 1–6, 300 rows | 1,500 | 5 | all OK; stream runs: **2,718 compared, 282 skipped** (documented limits) |
 | large, seed 1000, 20,000 rows | 1,500 | 5 | OK; 2,718 compared, 282 skipped |
-| large, seeds 1001–1002 | not run with the stream configurations | | the run takes ~20 min per seed because of the 37-byte blocks; it was stopped after seed 1000 |
+| large, seeds 1001–1002 (2026-10-31) | not run with the stream configurations | | the run takes ~20 min per seed because of the 37-byte blocks; it was stopped after seed 1000 |
+| **large, seeds 1000–1002, 20,000 rows, 4096-byte stream blocks** (2026-11-02, Phase 0 task 0.3) | 4,500 | 5 | all OK. Stream runs: seed 1000 **2,718 compared, 282 skipped**; seed 1001 **2,734 / 266**; seed 1002 **2,702 / 298**. 255.6 s test time, 4:25 wall incl. build, Apple M3 Pro. Command: `DIFFTEST_STREAM_BLOCK=4096 cargo test --release --test difftest -- --ignored --nocapture` |
 | earlier large runs (EXP-002, EXP-003), seeds 1000–1002, 1,000 queries each | 3,000 | 2–3 file configurations | all OK (before the stream configurations existed) |
 
 - **Threats to validity.**
@@ -176,7 +177,7 @@ A test that cannot fail proves nothing. Each entry breaks the code on purpose an
 | ID | Mutation | Expected | Observed |
 |---|---|---|---|
 | M-1 | parallel splitter ignores quote state (`row_start_at_or_after(.., false)`) | quoted-newline tests fail | `difftest_small` failed with `unterminated quoted field` ([EXP-003](experiments/003-parallel-chunked-scan.md)); reverted |
-| M-2 | stream `BlockSplitter::scan` ignores quote bytes (`if false && buf[at] == b'"'`) | stream tests with quoted newlines fail | 3 of 6 stream tests (`tricky_csv_…`, `odd_inputs_…`, `bad_value_late_…`) and the splitter unit test failed; `documented_stream_errors_are_clear`, `limit_stops_…` and `joins_…` passed because their data has no quoted newlines. The difftest was **not** re-run under this mutation. Reverted |
+| M-2 | stream `BlockSplitter::scan` ignores quote bytes (`if false && buf[at] == b'"'`) | stream tests with quoted newlines fail | 3 of 6 stream tests (`tricky_csv_…`, `odd_inputs_…`, `bad_value_late_…`) and the splitter unit test failed; `documented_stream_errors_are_clear`, `limit_stops_…` and `joins_…` passed because their data has no quoted newlines. Reverted. **Re-run 2026-11-02 (Phase 0 task 0.3), now with the difftest:** `difftest_small` fails at seed 2 (the first seed with quotes; seed 1 is quote-free and passes) with `[seed 2 q0] stream/blocks engine error: <stdin>: row 10: expected 4 fields, found 3`, on both stream configurations; the large run (`DIFFTEST_STREAM_BLOCK=4096`) fails at seed 1000 with `<stdin>: row 89: expected 8 fields, found 3`. Stream tests: the same 3 of 6 fail; the splitter unit test fails. `surface_audit` (12) and `regression` (1) stay green: their data has no quoted newlines. Reverted with `git checkout`; all suites green again |
 | P-1 | *(process, not code)* RSS measured from the benchmark harness | | the first EXP-005-stream run reported 341–666 MiB for every engine; the harness's own memory was inherited across `exec`. Discarded, harness fixed ([EXP-005-stream](experiments/005-stream-memory.md#caveats)) |
 
 ## Coverage matrix
@@ -205,7 +206,7 @@ Which invariant is checked where (see [architecture](architecture.md#invariants)
 | No automated test spawns `qe --stdin` with a real pipe | the CLI wiring (`Stdin`, flush per batch) is only exercised by the benchmark | integration test with `std::process::Command` and a piped stdin |
 | `f64` sums stream vs file mode compared with tolerance only | file mode merges per-chunk partials in a fixed tree; stream adds in order | bit-for-bit comparison on wide-magnitude data |
 | Memory bound is measured, not asserted | a regression would not turn a test red | a test with a tracking allocator or an RSS assertion on a long synthetic stream |
-| Large difftest with stream configurations ran for 1 of 3 seeds | breadth | bigger blocks in the large run to make it faster, then all seeds |
+| Large difftest with stream configurations runs at 4096-byte blocks; 37-byte blocks only in `difftest_small` (300 rows) and seed 1000 of the old run | block boundaries in the large run are rarer | run 37-byte blocks on all three seeds overnight (~1 h) |
 | Generator covers only the supported SQL | by design | none |
 | Stream tests use tiny data | block boundaries are covered, scale is not | the benchmark covers scale for one query |
 

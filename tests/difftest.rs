@@ -2,7 +2,8 @@
 //!
 //! * `cargo test`                                   small data, a few seeds (fast)
 //! * `cargo test --release --test difftest -- --ignored`  larger data / more queries
-//!   env: DIFFTEST_SEED (default 1000), DIFFTEST_QUERIES (default 1500), DIFFTEST_ROWS (default 20000)
+//!   env: DIFFTEST_SEED (default 1000), DIFFTEST_QUERIES (default 1500), DIFFTEST_ROWS (default 20000),
+//!   DIFFTEST_STREAM_BLOCK (stream block bytes, default 37; 4096 makes the large run ~85 s per seed instead of ~20 min)
 //!
 //! The same in-memory rows are written to CSV (for the engine, through its real CSV parser) and
 //! inserted into SQLite, so the test needs no CSV parser of its own. Comparison rules (CLAUDE.md):
@@ -687,6 +688,9 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
     write_schema(&dir, &tabs);
     let conn = load_sqlite(&tabs);
 
+    // Stream block size. 37 bytes puts block boundaries everywhere but makes the large run take ~20 min per seed;
+    // DIFFTEST_STREAM_BLOCK=4096 (or larger) keeps the stream configurations but makes the large run practical.
+    let stream_block = std::env::var("DIFFTEST_STREAM_BLOCK").ok().and_then(|v| v.parse().ok()).unwrap_or(37usize);
     let mut failures = Vec::new();
     let mut nonempty = 0;
     let (mut stream_ran, mut stream_skipped) = (0usize, 0usize);
@@ -711,9 +715,9 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
         // skipped and counted.
         let ftable = sql.split(" FROM ").nth(1).and_then(|r| r.split_whitespace().next()).unwrap().to_string();
         let mut stream_runs = Vec::new();
-        for (label, no_opt) in [("stream/37B blocks", false), ("stream/--no-opt", true)] {
+        for (label, no_opt) in [("stream/blocks", false), ("stream/--no-opt", true)] {
             let csv = std::fs::read(dir.join(format!("{ftable}.csv"))).unwrap();
-            let o = engine::Options { chunk_bytes: Some(37), no_opt, ..Default::default() };
+            let o = engine::Options { chunk_bytes: Some(stream_block), no_opt, ..Default::default() };
             let r = engine::run_collect_stream(
                 &dir,
                 &sql,
@@ -754,7 +758,7 @@ fn run(seed: u64, rows: usize, queries: usize, name: &str) {
     }
     assert!(failures.is_empty(), "\n{}\n(data dir: {})", failures.join("\n\n"), dir.display());
     eprintln!(
-        "difftest seed {seed}: {queries} queries OK ({nonempty} with non-empty results; stream runs: {stream_ran} compared, {stream_skipped} skipped for documented streaming limits)"
+        "difftest seed {seed}: {queries} queries OK ({nonempty} with non-empty results; stream runs ({stream_block}-byte blocks): {stream_ran} compared, {stream_skipped} skipped for documented streaming limits)"
     );
 }
 
