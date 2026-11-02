@@ -4,12 +4,19 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+/// Written once per process. Rewriting `t.csv` on every call let one test truncate the file while another test's
+/// `qe` had it memory-mapped; on Linux CI that `qe` died (killed by a signal, no output). Same hazard as in
+/// `tests/surface_audit.rs` and production-readiness.md §9.1.
 fn data_dir() -> std::path::PathBuf {
-    let d = std::env::temp_dir().join(format!("qe-surface-audit-{}", std::process::id()));
-    std::fs::create_dir_all(&d).unwrap();
-    std::fs::write(d.join("schema.toml"), "[t]\nid = \"i64\"\nname = \"str\"\n").unwrap();
-    std::fs::write(d.join("t.csv"), "id,name\n1,a\n2,b\n").unwrap();
-    d
+    static DIR: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let d = std::env::temp_dir().join(format!("qe-surface-audit-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        std::fs::write(d.join("schema.toml"), "[t]\nid = \"i64\"\nname = \"str\"\n").unwrap();
+        std::fs::write(d.join("t.csv"), "id,name\n1,a\n2,b\n").unwrap();
+        d
+    })
+    .clone()
 }
 
 /// Runs `qe --data <dir> args...` with `stdin` piped in; returns (exit ok, stdout, stderr).
@@ -30,6 +37,11 @@ fn qe(args: &[&str], stdin: &[u8]) -> (bool, String, String) {
     });
     let o = ch.wait_with_output().unwrap();
     let _ = h.join();
+    // a process killed by a signal has no exit code and often no output: say so instead of failing silently
+    #[cfg(unix)]
+    if let Some(sig) = std::os::unix::process::ExitStatusExt::signal(&o.status) {
+        panic!("qe {args:?} was killed by signal {sig}");
+    }
     (
         o.status.success(),
         String::from_utf8_lossy(&o.stdout).into_owned(),
