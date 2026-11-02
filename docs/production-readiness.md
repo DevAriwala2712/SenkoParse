@@ -121,7 +121,7 @@ Snapshot of `main` at `f80c6e0`. Full per-feature detail is in [sql-surface.md](
 | 6 | Errors are free text with no code and no position in the query | Hard to script against; hard to fix a query | [10](#10-operability-and-observability) |
 | 7 | Slower than DuckDB on Q4 (4.0x), Q5 (3.1x), Q9 (3.0x), Q8 (1.4x) at 1e8 | Speed claims must stay narrow | [8](#8-performance-plan) |
 | 8 | Unkeyed Fx hash with a fixed seed | Adversarial keys could force worst-case hash behaviour | [9.3](#93-threat-model) |
-| 9 | README says `SELECT *` is unsupported, but the parser accepts a bare `*` | Docs and code disagree; one of them is wrong | SQL surface PRJ-06 |
+| 9 | ~~README says `SELECT *` is unsupported, but the parser accepts a bare `*`~~ Resolved in Phase 0 (task 0.4): a bare `*` works and equals SQLite; the README was wrong and now says so | — | SQL surface PRJ-06 |
 | 10 | `docs/strategy.md` is referenced by `CLAUDE.md` but missing; ADR-0003 number is unused | Broken provenance | [Appendix C](#c-housekeeping) |
 
 ### 2.3 The failed demo aggregation: triage procedure
@@ -216,7 +216,7 @@ The full matrix, with today's state for every feature, lives in [sql-surface.md]
 |---|---|---|---|
 | Sources | named files via `schema.toml`, one `--stdin` table | schema inference, any path via a `--src name=path` flag (name to decide, [cli.md](cli.md)) | gzip/zstd built in, multiple pipes via named FIFOs |
 | Types | `i64`, `f64`, `decimal(N)`, `str`, `date` | `bool`, `CAST` | `timestamp`, interval arithmetic on dates |
-| Projection and filter | columns, aliases, `+ - * /`, comparisons, `AND OR NOT`, `IS [NOT] NULL` | `IN` list, `BETWEEN`, `LIKE`, `SELECT *`, `t.*` | `ILIKE`, `\|\|`, `NOT IN` with NULL semantics |
+| Projection and filter | columns, aliases, `+ - * /`, comparisons, `AND OR NOT`, `IS [NOT] NULL` | `IN` list, `BETWEEN`, `LIKE`, `t.*` (bare `SELECT *` already works, PRJ-06) | `ILIKE`, `\|\|`, `NOT IN` with NULL semantics |
 | Conditional | none | `CASE`, `COALESCE` | `NULLIF`, `IIF` |
 | Joins | `INNER`, `LEFT`, comma join, equality keys | self-join and 3+-way tests | `RIGHT`, `FULL`, `CROSS`, `USING`, non-equi conditions as a filter |
 | Aggregation | `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT)`, GROUP BY expr/ordinal/alias, HAVING | `SELECT DISTINCT`, `SUM/AVG(DISTINCT)` | statistics, `STRING_AGG`, `FILTER`, exact `MEDIAN` |
@@ -582,7 +582,7 @@ flowchart LR
 | 1.2 | Structured errors with positions and classes; exit codes 3 and 4 reserved | M | — |
 | 1.3 | `SELECT DISTINCT` (rewrite to GROUP BY), `SUM/AVG(DISTINCT)` | M | — |
 | 1.4 | `IN` list, `BETWEEN`, `LIKE`, `CASE`, `COALESCE`, `CAST`, `bool` type | L | 1.2 |
-| 1.5 | `OFFSET`, `NULLS FIRST/LAST`, `SELECT *`, `t.*` | M | 0.4 |
+| 1.5 | `OFFSET`, `NULLS FIRST/LAST`, `t.*` (bare `SELECT *` done in 0.4) | M | 0.4 |
 | 1.6 | P0 scalar functions: `ROUND`, `ABS`, `LOWER`, `UPPER`, `LENGTH` | M | 1.4 |
 | 1.7 | Generator extended to every new feature; DuckDB second oracle wired | L | 1.3-1.6 |
 | 1.8 | ∥ Unsupported-SQL fuzzer | M | 1.2 |

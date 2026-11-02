@@ -151,8 +151,8 @@ Full tour: [docs/architecture.md](docs/architecture.md).
 
 ### Supported SQL
 
-`SELECT` columns, expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
-Not supported: `SELECT *` / `t.*`, `IN (SELECT ...)`, window functions, anything else.
+`SELECT` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
+Not supported: `t.*`, `*` mixed with other items, `IN (SELECT ...)`, window functions, anything else. Per-feature state with the test for each: [docs/sql-surface.md](docs/sql-surface.md).
 
 ### Correctness rules the engine enforces
 
@@ -220,7 +220,7 @@ The complete list of claims, their evidence and open items is on the [status boa
 - The stream cannot be the right side of a `LEFT JOIN`, is never a join build side, and can be scanned once per query.
 - "Bounded" covers **input buffering**. A group table grows with the number of groups, and a join build side with its size.
 - A single row longer than 64 MiB is an error in stream mode.
-- `SELECT *` and `t.*` are not supported; list the columns.
+- `t.*` and `*` mixed with other select items are not supported (a bare `SELECT *` is; `surface_audit::prj06_select_star`).
 
 ---
 

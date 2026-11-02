@@ -42,7 +42,7 @@ python3 bench/run.py --rows 1e8              # timings vs DuckDB, appends to BEN
 Keep these commands working. Update this section if any change.
 
 ## Supported SQL (scope — reject anything else with a clear error)
-`SELECT` columns, expressions (+ − × ÷, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables (file name = table name) · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`. Schema comes from a `schema.toml` next to the data (column names, types: i64, f64, decimal(scale), str, date); no type sniffing.
+`SELECT` columns or a bare `*`, expressions (+ − × ÷, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables (file name = table name) · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`. Schema comes from a `schema.toml` next to the data (column names, types: i64, f64, decimal(scale), str, date); no type sniffing.
 
 ## Architecture
 ```
