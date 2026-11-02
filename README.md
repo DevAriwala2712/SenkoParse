@@ -14,6 +14,13 @@
 
 </div>
 
+**What it is not.** qe is a read-only query tool: one query per run over CSV files or a pipe, like `grep` for SQL. It is not a database management system.
+
+- No `INSERT`, `UPDATE`, `DELETE`, DDL or transactions. **ACID: read-only; nothing is written, so atomicity and durability do not apply.** qe does not detect an input file that changes during a query: do not modify input files while a query runs.
+- No server for multiple clients, no wire protocol, no persistent catalog. (`--serve` is a single-user local web UI bound to `127.0.0.1`.)
+- No cost-based optimizer: only documented rewrites (projection and predicate pushdown, join build-side choice) and data-driven fast paths that must equal the `--no-opt` reference.
+- No claim of general speed superiority over DuckDB: at 1e8 rows qe is slower on 4 of 9 file-mode queries (Q4 4.0x, Q5 3.1x, Q9 3.0x, Q8 1.4x; warm, all cores, interim run in [BENCHMARKS.md](BENCHMARKS.md#interim-after-exp-008-integer-join)).
+
 ---
 
 ## Why this exists
