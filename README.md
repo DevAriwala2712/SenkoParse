@@ -14,6 +14,13 @@
 
 </div>
 
+**What it is not.** qe is a read-only query tool: one query per run over CSV files or a pipe, like `grep` for SQL. It is not a database management system.
+
+- No `INSERT`, `UPDATE`, `DELETE`, DDL or transactions. **ACID: read-only; nothing is written, so atomicity and durability do not apply.** qe does not detect an input file that changes during a query: do not modify input files while a query runs.
+- No server for multiple clients, no wire protocol, no persistent catalog. (`--serve` is a single-user local web UI bound to `127.0.0.1`.)
+- No cost-based optimizer: only documented rewrites (projection and predicate pushdown, join build-side choice) and data-driven fast paths that must equal the `--no-opt` reference.
+- No claim of general speed superiority over DuckDB: at 1e8 rows qe is slower on 4 of 9 file-mode queries (Q4 4.0x, Q5 3.1x, Q9 3.0x, Q8 1.4x; warm, all cores, interim run in [BENCHMARKS.md](BENCHMARKS.md#interim-after-exp-008-integer-join)).
+
 ---
 
 ## Why this exists
@@ -151,8 +158,8 @@ Full tour: [docs/architecture.md](docs/architecture.md).
 
 ### Supported SQL
 
-`SELECT` columns, expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
-Not supported: `SELECT *` / `t.*`, `IN (SELECT ...)`, window functions, anything else.
+`SELECT` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
+Not supported: `t.*`, `*` mixed with other items, `IN (SELECT ...)`, window functions, anything else. Per-feature state with the test for each: [docs/sql-surface.md](docs/sql-surface.md).
 
 ### Correctness rules the engine enforces
 
@@ -220,7 +227,7 @@ The complete list of claims, their evidence and open items is on the [status boa
 - The stream cannot be the right side of a `LEFT JOIN`, is never a join build side, and can be scanned once per query.
 - "Bounded" covers **input buffering**. A group table grows with the number of groups, and a join build side with its size.
 - A single row longer than 64 MiB is an error in stream mode.
-- `SELECT *` and `t.*` are not supported; list the columns.
+- `t.*` and `*` mixed with other select items are not supported (a bare `SELECT *` is; `surface_audit::prj06_select_star`).
 
 ---
 

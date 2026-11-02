@@ -25,7 +25,10 @@ pub enum AggFunc {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Ast {
-    Col { q: Option<String>, name: String },
+    Col {
+        q: Option<String>,
+        name: String,
+    },
     /// Numeric literal text, classified at bind time (integer / decimal / float).
     Num(String),
     Str(String),
@@ -35,7 +38,11 @@ pub enum Ast {
     Not(Box<Ast>),
     IsNull(Box<Ast>, bool),
     /// `arg == None` means `COUNT(*)`.
-    Agg { func: AggFunc, arg: Option<Box<Ast>>, distinct: bool },
+    Agg {
+        func: AggFunc,
+        arg: Option<Box<Ast>>,
+        distinct: bool,
+    },
 }
 
 #[derive(Clone, Debug)]

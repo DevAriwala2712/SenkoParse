@@ -5,7 +5,7 @@ use common::Dribble;
 use engine::types::Value;
 use engine::Options;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 type Rows = Vec<Vec<Value>>;
 
@@ -19,16 +19,16 @@ fn dir(name: &str, files: &[(&str, &str)], schema: &str) -> PathBuf {
     d
 }
 
-fn file_run(d: &PathBuf, sql: &str, o: Options) -> Result<Rows, String> {
+fn file_run(d: &Path, sql: &str, o: Options) -> Result<Rows, String> {
     engine::run_collect_opts(d, sql, &o).map(|r| r.1).map_err(|e| e.0)
 }
 
-fn stream_run(d: &PathBuf, sql: &str, table: &str, input: Box<dyn Read + Send>, o: Options) -> Result<Rows, String> {
+fn stream_run(d: &Path, sql: &str, table: &str, input: Box<dyn Read + Send>, o: Options) -> Result<Rows, String> {
     engine::run_collect_stream(d, sql, &o, table, input).map(|r| r.1).map_err(|e| e.0)
 }
 
 /// File-mode error text mentions the file path; stream mode says `<stdin>`.
-fn unlabel(d: &PathBuf, table: &str, e: String) -> String {
+fn unlabel(d: &Path, table: &str, e: String) -> String {
     e.replace(&d.join(format!("{table}.csv")).display().to_string(), "<stdin>")
 }
 
@@ -41,7 +41,7 @@ fn sorted(mut r: Rows) -> Vec<String> {
 const T3: &str = "[t]\nid = \"i64\"\ns = \"str\"\nv = \"i64\"\n";
 
 /// Stream `csv` as table `t` of `d` through every read pattern and block size; each must equal file mode.
-fn check_all(d: &PathBuf, csv: &str, sql: &str, order_matters: bool) {
+fn check_all(d: &Path, csv: &str, sql: &str, order_matters: bool) {
     let want = file_run(d, sql, Options { no_opt: true, ..Default::default() }).map_err(|e| unlabel(d, "t", e));
     let fast = file_run(d, sql, Options::default()).map_err(|e| unlabel(d, "t", e));
     assert_eq!(fast, want, "file mode default vs --no-opt: {sql}");
@@ -134,7 +134,8 @@ fn bad_value_late_in_the_stream_reports_the_file_mode_row() {
     for block in [1, 50, 4096, 16 << 20] {
         for no_opt in [false, true] {
             let o = Options { chunk_bytes: Some(block), no_opt, ..Default::default() };
-            let got = stream_run(&d, "SELECT SUM(v) FROM t", "t", Box::new(Dribble::new(csv.as_bytes(), 9)), o).unwrap_err();
+            let got =
+                stream_run(&d, "SELECT SUM(v) FROM t", "t", Box::new(Dribble::new(csv.as_bytes(), 9)), o).unwrap_err();
             assert_eq!(got, unlabel(&d, "t", want.clone()).to_string(), "block {block}");
         }
     }
@@ -183,8 +184,14 @@ fn documented_stream_errors_are_clear() {
     let dim = "k,name\n1,a\n";
     let d = dir("errors", &[("t", csv), ("dim", dim)], JOIN_SCHEMA);
     let run = |q: &str, no_opt: bool| {
-        stream_run(&d, q, "t", Box::new(std::io::Cursor::new(csv.as_bytes().to_vec())), Options { no_opt, ..Default::default() })
-            .unwrap_err()
+        stream_run(
+            &d,
+            q,
+            "t",
+            Box::new(std::io::Cursor::new(csv.as_bytes().to_vec())),
+            Options { no_opt, ..Default::default() },
+        )
+        .unwrap_err()
     };
     for no_opt in [false, true] {
         let e = run("SELECT dim.name FROM dim LEFT JOIN t ON dim.k = t.k", no_opt);
@@ -194,9 +201,10 @@ fn documented_stream_errors_are_clear() {
         let e = run("SELECT name FROM dim", no_opt);
         assert!(e.contains("is not used by the query"), "{e}");
     }
-    let e = engine::run_collect_stream(&d, "SELECT 1 FROM t", &Options::default(), "nosuch", Box::new(std::io::empty()))
-        .map(|_| ())
-        .unwrap_err();
+    let e =
+        engine::run_collect_stream(&d, "SELECT 1 FROM t", &Options::default(), "nosuch", Box::new(std::io::empty()))
+            .map(|_| ())
+            .unwrap_err();
     assert!(e.0.contains("unknown table"), "{}", e.0);
 }
 
@@ -221,7 +229,8 @@ fn limit_stops_an_endless_stream() {
     for no_opt in [false, true] {
         let (tx, rx) = std::sync::mpsc::channel();
         let d = d.clone();
-        let input: Box<dyn Read + Send> = Box::new(std::io::Cursor::new(b"id,s,v\n".to_vec()).chain(Endless(0, vec![], 0)));
+        let input: Box<dyn Read + Send> =
+            Box::new(std::io::Cursor::new(b"id,s,v\n".to_vec()).chain(Endless(0, vec![], 0)));
         std::thread::spawn(move || {
             let o = Options { no_opt, chunk_bytes: Some(4096), ..Default::default() };
             tx.send(stream_run(&d, "SELECT id FROM t LIMIT 3", "t", input, o)).unwrap();

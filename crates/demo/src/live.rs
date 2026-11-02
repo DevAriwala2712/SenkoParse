@@ -43,7 +43,11 @@ impl Run {
         let out = spec.work.join("out.csv");
         let _ = std::fs::remove_dir_all(spec.work);
         std::fs::create_dir_all(&temp).map_err(|e| e.to_string())?;
-        let args: Vec<String> = spec.args.iter().map(|a| a.replace("{TEMP}", temp.to_str().unwrap()).replace("{OUT}", out.to_str().unwrap())).collect();
+        let args: Vec<String> = spec
+            .args
+            .iter()
+            .map(|a| a.replace("{TEMP}", temp.to_str().unwrap()).replace("{OUT}", out.to_str().unwrap()))
+            .collect();
         let outf = std::fs::File::create(&out).map_err(|e| e.to_string())?;
         let mut child = Command::new(&spec.program)
             .args(&args)
@@ -84,7 +88,19 @@ impl Run {
             let (rows, digest) = data::digest_file(&out2).unwrap_or((0, String::new()));
             *fin2.lock().unwrap() = Some(Finished { wall_ms, ok, rows, digest });
         });
-        Ok(Run { pid, t0, bytes, temp, out, rows: RowCounter::default(), last_rss: 0, peak_rss: 0, peak_temp: 0, fin, stop_feed })
+        Ok(Run {
+            pid,
+            t0,
+            bytes,
+            temp,
+            out,
+            rows: RowCounter::default(),
+            last_rss: 0,
+            peak_rss: 0,
+            peak_temp: 0,
+            fin,
+            stop_feed,
+        })
     }
 
     fn rss_kib(&self) -> Option<u64> {
@@ -112,7 +128,14 @@ impl Run {
     pub fn finished(&self) -> Option<End> {
         let g = self.fin.lock().unwrap();
         let f = g.as_ref()?;
-        Some(End { t_ms: f.wall_ms, ok: f.ok, peak_rss_kib: self.peak_rss, peak_temp: self.peak_temp, rows: f.rows, digest: f.digest.clone() })
+        Some(End {
+            t_ms: f.wall_ms,
+            ok: f.ok,
+            peak_rss_kib: self.peak_rss,
+            peak_temp: self.peak_temp,
+            rows: f.rows,
+            digest: f.digest.clone(),
+        })
     }
 
     pub fn kill(&self) {

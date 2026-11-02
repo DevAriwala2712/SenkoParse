@@ -10,8 +10,8 @@ pub mod par;
 use crate::plan::{Node, Plan};
 use crate::storage::csv::stream::{EmptyScan, StreamInput, StreamScan};
 use crate::types::{Batch, Column, Ty};
-use std::sync::Arc;
 use crate::{Options, Result};
+use std::sync::Arc;
 
 pub trait Op: Send {
     fn next(&mut self) -> Result<Option<Batch>>;
@@ -103,12 +103,10 @@ fn place(plan: Plan, table: &str) -> Result<Plan> {
 pub fn build_serial(plan: Plan, opts: &Options, stream: Option<&Arc<StreamInput>>) -> Result<Box<dyn Op>> {
     let types: Vec<Ty> = plan.schema.iter().map(|f| f.ty).collect();
     Ok(match plan.node {
-        Node::Scan { table, cols } if stream.map_or(false, |s| s.table == table.name) => {
-            match stream.unwrap().take() {
-                Some(r) => Box::new(StreamScan::new(r, table, cols, true, opts.chunk_bytes)),
-                None => Box::new(EmptyScan),
-            }
-        }
+        Node::Scan { table, cols } if stream.is_some_and(|s| s.table == table.name) => match stream.unwrap().take() {
+            Some(r) => Box::new(StreamScan::new(r, table, cols, true, opts.chunk_bytes)),
+            None => Box::new(EmptyScan),
+        },
         Node::Scan { table, cols } => {
             Box::new(ops::Scan::new(crate::storage::csv::CsvSource::open(&table, &cols, true)?.whole()))
         }
@@ -116,9 +114,11 @@ pub fn build_serial(plan: Plan, opts: &Options, stream: Option<&Arc<StreamInput>
         Node::Project { input, exprs } => Box::new(ops::Project { input: build_serial(*input, opts, stream)?, exprs }),
         Node::Limit { input, n } => Box::new(ops::Limit { input: build_serial(*input, opts, stream)?, left: n }),
         Node::Sort { input, keys } => Box::new(ops::Sort::new(build_serial(*input, opts, stream)?, keys, types)),
-        Node::Aggregate { input, keys, aggs } => {
-            Box::new(hash_agg::HashAgg::new(hash_agg::AggInput::Serial(build_serial(*input, opts, stream)?), keys, aggs))
-        }
+        Node::Aggregate { input, keys, aggs } => Box::new(hash_agg::HashAgg::new(
+            hash_agg::AggInput::Serial(build_serial(*input, opts, stream)?),
+            keys,
+            aggs,
+        )),
         Node::Join { left, right, kind, lkeys, rkeys, build_left } => {
             let (lt, rt): (Vec<Ty>, Vec<Ty>) =
                 (left.schema.iter().map(|f| f.ty).collect(), right.schema.iter().map(|f| f.ty).collect());

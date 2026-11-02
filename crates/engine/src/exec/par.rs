@@ -58,7 +58,7 @@ impl ExecCtx {
     }
 
     pub fn is_stream(&self, table: &str) -> bool {
-        self.stream.as_ref().map_or(false, |s| s.table == table)
+        self.stream.as_ref().is_some_and(|s| s.table == table)
     }
 
     /// Run `f` on this query's thread pool (the global rayon pool unless `--threads` was given).
@@ -152,7 +152,9 @@ pub fn build_par(plan: &Plan, ctx: &Arc<ExecCtx>) -> Result<Box<dyn Op>> {
                 },
                 // e.g. HAVING / projection over an aggregate: cheap, stays serial
                 Node::Filter { input, pred } => Box::new(Filter { input: build_par(input, ctx)?, pred: pred.clone() }),
-                Node::Project { input, exprs } => Box::new(Project { input: build_par(input, ctx)?, exprs: exprs.clone() }),
+                Node::Project { input, exprs } => {
+                    Box::new(Project { input: build_par(input, ctx)?, exprs: exprs.clone() })
+                }
                 Node::Join { left, right, kind, lkeys, rkeys, build_left } => Box::new(HashJoin::new(
                     build_par(left, ctx)?,
                     build_par(right, ctx)?,

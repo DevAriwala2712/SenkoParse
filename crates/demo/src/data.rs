@@ -121,7 +121,9 @@ pub fn recorded(raw: &Path, engine: &str, size: &str) -> Option<Recorded> {
     let rows: Vec<json::Obj> = text
         .lines()
         .filter_map(json::parse_obj)
-        .filter(|o| json::text(o, "engine").as_deref() == Some(engine) && json::text(o, "size").as_deref() == Some(size))
+        .filter(|o| {
+            json::text(o, "engine").as_deref() == Some(engine) && json::text(o, "size").as_deref() == Some(size)
+        })
         .collect();
     if rows.is_empty() {
         return None;
@@ -149,12 +151,22 @@ pub fn machine() -> String {
     let os = format!("{} {}", sh("uname", &["-s"]).unwrap_or_default(), sh("uname", &["-m"]).unwrap_or_default());
     let cpu = std::fs::read_to_string("/proc/cpuinfo")
         .ok()
-        .and_then(|t| t.lines().find(|l| l.starts_with("model name")).and_then(|l| l.split(':').nth(1)).map(|s| s.trim().to_string()))
+        .and_then(|t| {
+            t.lines()
+                .find(|l| l.starts_with("model name"))
+                .and_then(|l| l.split(':').nth(1))
+                .map(|s| s.trim().to_string())
+        })
         .or_else(|| sh("sysctl", &["-n", "machdep.cpu.brand_string"]))
         .unwrap_or_else(|| "unknown CPU".into());
     let ram_kib = std::fs::read_to_string("/proc/meminfo")
         .ok()
-        .and_then(|t| t.lines().find(|l| l.starts_with("MemTotal")).and_then(|l| l.split_whitespace().nth(1)).and_then(|v| v.parse::<u64>().ok()))
+        .and_then(|t| {
+            t.lines()
+                .find(|l| l.starts_with("MemTotal"))
+                .and_then(|l| l.split_whitespace().nth(1))
+                .and_then(|v| v.parse::<u64>().ok())
+        })
         .or_else(|| sh("sysctl", &["-n", "hw.memsize"]).and_then(|v| v.parse::<u64>().ok()).map(|b| b / 1024));
     let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(0);
     let ram = ram_kib.map(|k| format!("{:.1} GiB RAM", k as f64 / 1048576.0)).unwrap_or_else(|| "? RAM".into());

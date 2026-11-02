@@ -7,3 +7,4 @@ target/
 /.demo-data/
 /.demo-venv/
 /*.whl
+.DS_Store

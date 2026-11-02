@@ -118,7 +118,7 @@ pub fn run(s: &Session, sql: &str, keep: Option<usize>) -> engine::Result<Shown>
     let mut total = 0usize;
     while let Some(b) = p.root.next()? {
         for i in 0..b.len {
-            if keep.map_or(true, |k| rows.len() < k) {
+            if keep.is_none_or(|k| rows.len() < k) {
                 rows.push(b.cols.iter().map(|c| cell(&c.value(i))).collect());
             }
         }
@@ -190,7 +190,11 @@ fn print_csv(sh: &Shown, out: &mut impl Write) {
     }
     let _ = writeln!(out, "{}", sh.names.iter().map(|s| f(s)).collect::<Vec<_>>().join(","));
     for r in &sh.rows {
-        let _ = writeln!(out, "{}", r.iter().map(|s| if s == "NULL" { String::new() } else { f(s) }).collect::<Vec<_>>().join(","));
+        let _ = writeln!(
+            out,
+            "{}",
+            r.iter().map(|s| if s == "NULL" { String::new() } else { f(s) }).collect::<Vec<_>>().join(",")
+        );
     }
 }
 
@@ -275,7 +279,7 @@ fn print_schema(s: &Session, which: Option<&str>) {
             let want = which.map(|w| w.to_ascii_lowercase());
             let mut found = false;
             for n in names {
-                if want.as_ref().map_or(false, |w| *w != n) {
+                if want.as_ref().is_some_and(|w| *w != n) {
                     continue;
                 }
                 found = true;
@@ -302,7 +306,11 @@ pub fn human(b: u64) -> String {
         v /= 1000.0;
         i += 1;
     }
-    if i == 0 { format!("{b} B") } else { format!("{v:.2} {}", U[i]) }
+    if i == 0 {
+        format!("{b} B")
+    } else {
+        format!("{v:.2} {}", U[i])
+    }
 }
 
 fn help() {

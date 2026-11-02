@@ -19,10 +19,18 @@ const BAD: &str = "38;5;203";
 const WARN: &str = "38;5;214";
 
 fn c(v: &View, code: &str, s: &str) -> String {
-    if v.color { format!("\x1b[{code}m{s}\x1b[0m") } else { s.to_string() }
+    if v.color {
+        format!("\x1b[{code}m{s}\x1b[0m")
+    } else {
+        s.to_string()
+    }
 }
 fn bold(v: &View, code: &str, s: &str) -> String {
-    if v.color { format!("\x1b[1;{code}m{s}\x1b[0m") } else { s.to_string() }
+    if v.color {
+        format!("\x1b[1;{code}m{s}\x1b[0m")
+    } else {
+        s.to_string()
+    }
 }
 
 /// Visible width (escape sequences count as zero).
@@ -89,7 +97,7 @@ pub fn thousands(n: u64) -> String {
     let s = n.to_string();
     let mut o = String::new();
     for (i, ch) in s.chars().enumerate() {
-        if i > 0 && (s.len() - i) % 3 == 0 {
+        if i > 0 && (s.len() - i).is_multiple_of(3) {
             o.push(',');
         }
         o.push(ch);
@@ -194,7 +202,8 @@ fn panel(v: &View, e: &Eng, pw: usize) -> Vec<String> {
     };
     let title = format!(" {} ", bold(v, acc, e.label));
     let fill = pw.saturating_sub(vlen(&title) + vlen(&status) + 6);
-    let top = format!("{}{}{}{}{}{}", c(v, DIM, "╭─"), title, c(v, DIM, &"─".repeat(fill)), " ", status, c(v, DIM, " ─╮"));
+    let top =
+        format!("{}{}{}{}{}{}", c(v, DIM, "╭─"), title, c(v, DIM, &"─".repeat(fill)), " ", status, c(v, DIM, " ─╮"));
     let mut out = vec![fit(&top, pw)];
     let pwid = iw.saturating_sub(2);
     let max_kib = rss_scale(v);
@@ -258,7 +267,7 @@ fn panel(v: &View, e: &Eng, pw: usize) -> Vec<String> {
         let _ = live;
         out.push(side(String::new()));
     }
-    out.push(fit(&format!("{}", c(v, DIM, &format!("╰{}╯", "─".repeat(iw)))), pw));
+    out.push(fit(&c(v, DIM, &format!("╰{}╯", "─".repeat(iw))).to_string(), pw));
     out
 }
 
@@ -308,18 +317,26 @@ fn card(v: &View, w: usize) -> Vec<String> {
                 r.out_rows,
                 String::new(),
             ),
-            (_, Some(x)) => (mib(x.peak_rss_kib), gb(x.peak_temp), secs(x.t_ms), thousands(x.rows), x.rows, x.digest.clone()),
+            (_, Some(x)) => {
+                (mib(x.peak_rss_kib), gb(x.peak_temp), secs(x.t_ms), thousands(x.rows), x.rows, x.digest.clone())
+            }
             _ => ("n/a".into(), "n/a".into(), "n/a".into(), "n/a".into(), 0, String::new()),
         }
     };
     let (qa, qb, qc, qd, qr, qh) = get(q);
     let (da, db, dc, dd, dr, dh) = get(d);
-    let verdict = if q.end.as_ref().is_some_and(|e| !e.ok) || matches!(&d.source, Source::Live | Source::Replay) && d.end.as_ref().is_some_and(|e| !e.ok) {
+    let verdict = if q.end.as_ref().is_some_and(|e| !e.ok)
+        || matches!(&d.source, Source::Live | Source::Replay) && d.end.as_ref().is_some_and(|e| !e.ok)
+    {
         c(v, BAD, "✗ an engine exited with an error")
     } else if matches!(d.source, Source::Missing(_)) {
         c(v, DIM, "– DuckDB not run")
     } else if matches!(d.source, Source::Summary(_)) || matches!(q.source, Source::Summary(_)) {
-        if qr == dr { c(v, OK, "✓ row counts equal (hash n/a)") } else { c(v, BAD, "✗ row counts differ") }
+        if qr == dr {
+            c(v, OK, "✓ row counts equal (hash n/a)")
+        } else {
+            c(v, BAD, "✗ row counts differ")
+        }
     } else if qr == dr && !qh.is_empty() && qh == dh {
         c(v, OK, &format!("✓ same rows · hash {}", &qh[..8.min(qh.len())]))
     } else {
@@ -354,12 +371,19 @@ pub fn render(v: &View, w: usize) -> Vec<String> {
         lines.push(format!("{a} {b}"));
     }
     lines.push(banner(v, w));
-    let revealed = |e: &Eng| match &e.source { Source::Summary(r) if v.reveal_clock => v.now_ms >= (r.wall_s * 1000.0) as u64, _ => true };
+    let revealed = |e: &Eng| match &e.source {
+        Source::Summary(r) if v.reveal_clock => v.now_ms >= (r.wall_s * 1000.0) as u64,
+        _ => true,
+    };
     let done = v.qe.done() && v.duck.done() && revealed(v.qe) && revealed(v.duck);
     if done {
         lines.extend(card(v, w));
     } else {
-        let note = if v.meta.note.is_empty() { "result card appears when both engines finish".to_string() } else { v.meta.note.clone() };
+        let note = if v.meta.note.is_empty() {
+            "result card appears when both engines finish".to_string()
+        } else {
+            v.meta.note.clone()
+        };
         lines.push(center(&c(v, DIM, &note), w));
         for _ in 0..7 {
             lines.push(" ".repeat(w));
@@ -370,9 +394,22 @@ pub fn render(v: &View, w: usize) -> Vec<String> {
         fit(&c(v, DIM, &s), w)
     };
     lines.push(foot(format!(" machine: {}", v.meta.machine)));
-    lines.push(foot(format!(" DuckDB {} · SenkoParse {} · input {} ({})", v.meta.duckdb, v.meta.qe_settings, v.meta.size, gb(v.meta.total_bytes))));
+    lines.push(foot(format!(
+        " DuckDB {} · SenkoParse {} · input {} ({})",
+        v.meta.duckdb,
+        v.meta.qe_settings,
+        v.meta.size,
+        gb(v.meta.total_bytes)
+    )));
     lines.push(foot(format!(" query: {}", v.meta.query)));
-    lines.push(foot(format!(" One query, one data shape (cf. DuckDB #25165): not a general speed claim.{}", if matches!(v.qe.source, Source::Summary(_)) || matches!(v.duck.source, Source::Summary(_)) { " * recorded" } else { "" })));
+    lines.push(foot(format!(
+        " One query, one data shape (cf. DuckDB #25165): not a general speed claim.{}",
+        if matches!(v.qe.source, Source::Summary(_)) || matches!(v.duck.source, Source::Summary(_)) {
+            " * recorded"
+        } else {
+            ""
+        }
+    )));
     lines.into_iter().map(|l| fit(&l, w)).collect()
 }
 
@@ -380,7 +417,15 @@ pub fn render(v: &View, w: usize) -> Vec<String> {
 pub fn status_line(v: &View) -> String {
     let f = |e: &Eng| {
         let s = e.last();
-        format!("{}: in {} rss {} temp {} rows {}{}", e.key, gb(s.bytes), mib(s.rss_kib), gb(s.temp), thousands(s.rows), if e.end.is_some() { " [done]" } else { "" })
+        format!(
+            "{}: in {} rss {} temp {} rows {}{}",
+            e.key,
+            gb(s.bytes),
+            mib(s.rss_kib),
+            gb(s.temp),
+            thousands(s.rows),
+            if e.end.is_some() { " [done]" } else { "" }
+        )
     };
     format!("[{:>5.1}s] {} | {}", v.now_ms as f64 / 1000.0, f(v.qe), f(v.duck))
 }
@@ -405,7 +450,11 @@ mod tests {
     /// The committed live recording replays into a frame whose every line is exactly the terminal width.
     #[test]
     fn recorded_run_renders_at_every_width() {
-        let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/experiments/data/demo-live-5x.jsonl")).unwrap();
+        let text = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../docs/experiments/data/demo-live-5x.jsonl"
+        ))
+        .unwrap();
         let rec = load_recording(&text).expect("recording");
         let mut qe = Eng::new("qe", "SenkoParse", "38;5;43", Source::Replay);
         let mut duck = Eng::new("duckdb", "DuckDB (piped)", "38;5;214", Source::Replay);

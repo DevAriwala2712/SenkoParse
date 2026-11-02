@@ -51,7 +51,10 @@ impl Eng {
         self.samples.last().cloned().unwrap_or_default()
     }
     pub fn peak_rss_kib(&self) -> u64 {
-        self.end.as_ref().map(|e| e.peak_rss_kib).unwrap_or_else(|| self.samples.iter().map(|s| s.rss_kib).max().unwrap_or(0))
+        self.end
+            .as_ref()
+            .map(|e| e.peak_rss_kib)
+            .unwrap_or_else(|| self.samples.iter().map(|s| s.rss_kib).max().unwrap_or(0))
     }
     pub fn peak_temp(&self) -> u64 {
         self.end.as_ref().map(|e| e.peak_temp).unwrap_or_else(|| self.samples.iter().map(|s| s.temp).max().unwrap_or(0))
@@ -76,20 +79,33 @@ pub struct Meta {
 }
 
 pub fn sample_json(eng: &str, s: &Sample) -> String {
-    format!(r#"{{"kind":"s","eng":"{eng}","t_ms":{},"bytes":{},"rss_kib":{},"temp":{},"rows":{}}}"#, s.t_ms, s.bytes, s.rss_kib, s.temp, s.rows)
+    format!(
+        r#"{{"kind":"s","eng":"{eng}","t_ms":{},"bytes":{},"rss_kib":{},"temp":{},"rows":{}}}"#,
+        s.t_ms, s.bytes, s.rss_kib, s.temp, s.rows
+    )
 }
 
 pub fn end_json(eng: &str, e: &End) -> String {
     format!(
         r#"{{"kind":"end","eng":"{eng}","t_ms":{},"ok":{},"peak_rss_kib":{},"peak_temp":{},"rows":{},"digest":"{}"}}"#,
-        e.t_ms, e.ok as u8, e.peak_rss_kib, e.peak_temp, e.rows, esc(&e.digest)
+        e.t_ms,
+        e.ok as u8,
+        e.peak_rss_kib,
+        e.peak_temp,
+        e.rows,
+        esc(&e.digest)
     )
 }
 
 pub fn meta_json(m: &Meta) -> String {
     format!(
         r#"{{"kind":"meta","size":"{}","total_bytes":{},"machine":"{}","duckdb":"{}","qe_settings":"{}","query":"{}"}}"#,
-        esc(&m.size), m.total_bytes, esc(&m.machine), esc(&m.duckdb), esc(&m.qe_settings), esc(&m.query)
+        esc(&m.size),
+        m.total_bytes,
+        esc(&m.machine),
+        esc(&m.duckdb),
+        esc(&m.qe_settings),
+        esc(&m.query)
     )
 }
 
@@ -123,7 +139,13 @@ pub fn load_recording(text: &str) -> Option<Recording> {
             Some("s") | Some("end") => {
                 let tgt = if json::text(&o, "eng").as_deref() == Some("qe") { &mut qe } else { &mut duck };
                 if json::text(&o, "kind").as_deref() == Some("s") {
-                    tgt.0.push(Sample { t_ms: n("t_ms"), bytes: n("bytes"), rss_kib: n("rss_kib"), temp: n("temp"), rows: n("rows") });
+                    tgt.0.push(Sample {
+                        t_ms: n("t_ms"),
+                        bytes: n("bytes"),
+                        rss_kib: n("rss_kib"),
+                        temp: n("temp"),
+                        rows: n("rows"),
+                    });
                 } else {
                     tgt.1 = Some(End {
                         t_ms: n("t_ms"),

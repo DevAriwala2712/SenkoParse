@@ -26,7 +26,8 @@ pub(crate) fn rss_bytes() -> Option<u64> {
         return Some(pages * 4096);
     }
     // macOS and others: `ps` is the portable fallback (same call the demo uses).
-    let out = std::process::Command::new("ps").args(["-o", "rss=", "-p", &std::process::id().to_string()]).output().ok()?;
+    let out =
+        std::process::Command::new("ps").args(["-o", "rss=", "-p", &std::process::id().to_string()]).output().ok()?;
     let kib: u64 = String::from_utf8_lossy(&out.stdout).trim().parse().ok()?;
     Some(kib * 1024)
 }
