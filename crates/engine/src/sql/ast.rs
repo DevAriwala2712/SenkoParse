@@ -76,6 +76,8 @@ pub struct Join {
 
 #[derive(Clone, Debug)]
 pub struct Select {
+    /// `SELECT DISTINCT`: rewritten by the binder to GROUP BY the select list.
+    pub distinct: bool,
     pub star: bool,
     pub items: Vec<SelectItem>,
     pub from: TableRef,

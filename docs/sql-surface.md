@@ -112,8 +112,8 @@ The aggregate catalog with state shapes is in [production-readiness.md §5](prod
 |---|---|---|---|---|---|
 | AGG-01 | `COUNT(*)`, `COUNT(x)`, `SUM`, `AVG`, `MIN`, `MAX` | ✅ | P0 | S | difftest |
 | AGG-02 | `COUNT(DISTINCT x)` | ✅ | P0 | S | difftest |
-| AGG-03 | `SELECT DISTINCT` | ⛔ | **P0** | S | equals GROUP BY all columns |
-| AGG-04 | `SUM(DISTINCT x)`, `AVG(DISTINCT x)` | ⛔ | **P0** | S | duplicates across chunks |
+| AGG-03 | `SELECT DISTINCT` | ✅ rewritten to GROUP BY the select list (`surface_audit::agg03_agg04_distinct`, difftest); with GROUP BY, HAVING or aggregates still ⛔ | **P0** | S | equals GROUP BY all columns |
+| AGG-04 | `SUM(DISTINCT x)`, `AVG(DISTINCT x)` | ✅ from the distinct-key set; f64 summed in sorted order so thread-independent (`surface_audit::agg03_agg04_distinct`, difftest) | **P0** | S | duplicates across chunks |
 | AGG-05 | `COUNT(DISTINCT a, b)` | ❌ (`expected ')', found ','`; `surface_audit::not_recognised_sql_gives_a_generic_error`) | P2 | D | — |
 | AGG-06 | GROUP BY column, expression, ordinal, alias | ✅ | P0 | S | difftest, `GROUP BY 1` |
 | AGG-07 | `HAVING`, including aggregates not in SELECT | ✅ | P0 | S | difftest |

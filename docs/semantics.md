@@ -74,6 +74,7 @@ Integer literals are classified at bind time: a literal without a decimal point 
 | `COUNT(*)` | 0 | `i64` | counts rows |
 | `COUNT(x)` | 0 | `i64` | skips NULL |
 | `COUNT(DISTINCT x)` | 0 | set of canonical key bytes | NULL not counted |
+| `SUM(DISTINCT x)`, `AVG(DISTINCT x)` | NULL | same set; decoded at the end | integer and decimal: exact `i128`; `f64`: values sorted, then Kahan-summed, so the result does not depend on chunking or threads. `MIN/MAX(DISTINCT x)` = `MIN/MAX(x)` |
 | `SUM` on `i64` | NULL | `i128`, error when the final value does not fit `i64` | overflow checked once, at the end, so it does not depend on order |
 | `SUM` on decimal | NULL | `i128` at column scale | exact |
 | `SUM` on `f64` | NULL | Kahan-compensated, fixed merge order | bit-identical across threads |
@@ -88,7 +89,7 @@ An aggregate query with no GROUP BY returns exactly one row, even on empty input
 - All NULL keys form **one** group (GROUP BY, DISTINCT, COUNT(DISTINCT) of multi-column keys).
 - `GROUP BY` names are resolved first as input columns, then as select aliases (an alias that shadows a column loses, as in SQLite and PostgreSQL). `GROUP BY 1` refers to the first select item.
 - A non-grouped, non-aggregated column in SELECT is an error (SQLite would accept it and pick an arbitrary row; we do not, deliberately).
-- `SELECT DISTINCT` (planned) is defined as `GROUP BY` over all select items.
+- `SELECT DISTINCT` is rewritten to `GROUP BY` over all select items (binder, `plan/mod.rs`). With GROUP BY, HAVING or aggregates it is rejected as unsupported. As with GROUP BY, an ORDER BY term must be a select item.
 
 ## Ordering
 

@@ -112,7 +112,7 @@ fn errors_are_loud_and_specific() {
         ("SELECT s, COUNT(*) FROM t", "GROUP BY"),
         ("SELECT id FROM t a JOIN t b ON a.id = b.id", "ambiguous"),
         ("SELECT SUM(s) FROM t", "not defined"),
-        ("SELECT DISTINCT id FROM t", "DISTINCT"),
+        ("SELECT DISTINCT COUNT(*) FROM t", "SELECT DISTINCT with GROUP BY"),
     ] {
         let e = err(&d, sql);
         assert!(e.contains(want), "{sql}: got `{e}`, wanted `{want}`");

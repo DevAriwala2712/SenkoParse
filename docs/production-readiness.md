@@ -114,7 +114,7 @@ Snapshot of `main` at `f80c6e0`. Full per-feature detail is in [sql-surface.md](
 | Rank | Gap | Effect on a user | Section |
 |---|---|---|---|
 | 1 | ~~`schema.toml` is required; no type inference~~ First cut done 2026-11-07 (ADR-0007): a plain CSV runs; still missing `DESCRIBE`, `bool`/`decimal` inference, mid-file samples | Was: any new CSV failed with `cannot read schema.toml` or `unknown table` | [9](#9-input-robustness-and-security), SRC-03 |
-| 2 | No `SELECT DISTINCT`, `SUM(DISTINCT)`, `CASE`, `IN`, `BETWEEN`, `LIKE`, `OFFSET`, scalar functions (`ROUND`, `LOWER`, ...) | Common judge and user queries are rejected (with a clear error, which is the right failure) | [4](#4-sql-surface) |
+| 2 | No ~~`SELECT DISTINCT`, `SUM(DISTINCT)`~~ (done 2026-11-07, task 1.3), `CASE`, `IN`, `BETWEEN`, `LIKE`, `OFFSET`, scalar functions (`ROUND`, `LOWER`, ...) | Common judge and user queries are rejected (with a clear error, which is the right failure) | [4](#4-sql-surface) |
 | 3 | No memory budget, no spill; sort is fully in memory; join build side fully in memory | High-cardinality GROUP BY or a big join over a pipe can exhaust RAM | [6](#6-architecture-and-memory-model) |
 | 4 | File-mode RSS is about the input size (mmap) | "Bounded memory" is false for file mode as RSS is usually measured | [memory-model.md](memory-model.md) |
 | 5 | No CI, no `LICENSE`, no release binaries | Nobody can safely depend on it or contribute | [11](#11-release-engineering) |
@@ -253,8 +253,8 @@ Every aggregate is implemented against one interface so that parallel merge, spi
 | `SUM`, `AVG` on `f64` | P0 | ✅ Kahan | sum + compensation + count | order-sensitive | `NaN`, `±inf`, catastrophic cancellation; bit-identical across threads |
 | `MIN`, `MAX` | P0 | ✅ | one value | exact except `f64` | text byte order; `-0.0` vs `0.0`; `NaN` (see [semantics.md](semantics.md#ordering)) |
 | `COUNT(DISTINCT col)` | P0 | ✅ in memory | set of keys, unbounded | exact | 10M distinct values under a 256 MB limit (must spill) |
-| `SELECT DISTINCT` | P0 | ❌ | rewrite to GROUP BY all columns | exact | equals GROUP BY on all columns, NULL as one value |
-| `SUM/AVG(DISTINCT)` | P0 | ❌ | set of values | exact for integers, order-sensitive for `f64` | duplicates across chunks |
+| `SELECT DISTINCT` | P0 | ✅ (task 1.3) | rewrite to GROUP BY all columns | exact | equals GROUP BY on all columns, NULL as one value |
+| `SUM/AVG(DISTINCT)` | P0 | ✅ (task 1.3; f64 summed in sorted order) | set of values | exact for integers, order-sensitive for `f64` | duplicates across chunks |
 | `STDDEV_SAMP/POP`, `VAR_SAMP/POP` | P1 | ❌ | count, mean, M2 (Welford; Chan et al. for merge) | order-sensitive | one row gives NULL for sample variance |
 | `STRING_AGG(x, sep [ORDER BY ...])` | P1 | ❌ | list, unbounded | order-sensitive by definition | separator, order inside the group, NULLs skipped |
 | `ANY_VALUE`, `ARG_MIN`, `ARG_MAX` | P1 | ❌ | one or two values | `ANY_VALUE` must still be deterministic | ties: lowest chunk index then row number wins |

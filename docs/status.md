@@ -33,6 +33,7 @@ flowchart LR
 | Spill (Grace hash partitioning) | ⚪ deferred, only if time remains after P5 | robustness, not speed |
 | **Phase 0** audit and baseline (production-readiness §12, tasks 0.1-0.7) | ✅ merged in PR #7 (2026-11-02), CI green on ubuntu and macos; gate met | [sql-surface.md audit](sql-surface.md#phase-0-audit-2026-11-02), `tests/surface_audit.rs`, `.github/workflows/ci.yml` |
 | **Phase 1, task 1.1** schema inference (SRC-03) | 🟡 first cut 2026-11-07: plain CSVs run without `schema.toml`; header + first 1 MiB, `i64`/`f64`/`date`/`str`; `schema.toml` wins; late misfit is an error with a hint. Not yet: `DESCRIBE`, `bool`/`decimal` inference, mid-file samples, inference corpus | [ADR-0007](adr/0007-schema-inference.md), `tests/infer.rs` (5 tests, mutation-checked: I64+F64→I64 widening fails 3 tests), regression C07a now returns rows |
+| **Phase 1, task 1.3** `SELECT DISTINCT`, `SUM/AVG(DISTINCT)` (AGG-03, AGG-04) | ✅ 2026-11-07: DISTINCT rewritten to GROUP BY the select list; SUM/AVG(DISTINCT) decode the distinct-key set (f64 sorted before Kahan sum, thread-independent). Still ⛔: DISTINCT combined with GROUP BY/HAVING/aggregates | `surface_audit::agg03_agg04_distinct` (vs SQLite), difftest generator now emits both; mutation-checked (ignoring DISTINCT, and AVG dividing by n+1, each fail difftest, regression and surface audit) |
 
 ## Streaming plan ([CLAUDE.md](../CLAUDE.md))
 

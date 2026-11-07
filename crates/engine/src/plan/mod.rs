@@ -525,19 +525,33 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
         })
         .collect();
 
-    let is_agg = !stmt.group_by.is_empty()
+    let mut is_agg = !stmt.group_by.is_empty()
         || stmt.having.is_some()
         || items.iter().any(|i| contains_agg(&i.expr))
         || stmt.order_by.iter().any(|(a, _)| contains_agg(a));
+
+    // SELECT DISTINCT e1, ..., en  ==  SELECT e1, ..., en ... GROUP BY e1, ..., en. Valid because each output
+    // row is then exactly one group key, groups are distinct by construction, and all NULLs of a key form one
+    // group, which is what DISTINCT requires (NULLs compare as equal for DISTINCT). Only the plain form is
+    // rewritten: with GROUP BY, HAVING or aggregates, DISTINCT would apply to the aggregated rows, a second
+    // grouping this binder does not build.
+    let mut group_by = stmt.group_by.clone();
+    if stmt.distinct {
+        if is_agg {
+            return Err(err!("unsupported SQL feature: SELECT DISTINCT with GROUP BY, HAVING or aggregates"));
+        }
+        group_by = items.iter().map(|i| i.expr.clone()).collect();
+        is_agg = true;
+    }
 
     let from_schema = plan.schema.clone();
     let mut actx = AggCtx { from: &from_schema, keys: vec![], aggs: vec![] };
     let mut outs: Vec<BExpr> = Vec::new();
 
     if is_agg {
-        for g in &stmt.group_by {
+        for g in &group_by {
             let g = match g {
-                Ast::Num(n) => {
+                Ast::Num(n) if !stmt.distinct => {
                     let k: usize = n.parse().map_err(|_| err!("bad GROUP BY ordinal"))?;
                     items
                         .get(k.wrapping_sub(1))

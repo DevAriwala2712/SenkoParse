@@ -363,6 +363,11 @@ fn agg(rng: &mut Rng, sc: &[Col]) -> String {
     match rng.below(9) {
         0 => "COUNT(*)".into(),
         1 => format!("COUNT({})", rng.pick(sc).r()),
+        // DISTINCT only over plain columns: a computed decimal is exact here but REAL in SQLite, so which
+        // values count as equal could differ for reasons unrelated to DISTINCT.
+        2 if !nc.is_empty() && rng.chance(50) => {
+            format!("{}(DISTINCT {})", rng.pick(&["SUM", "AVG"]), rng.pick(&nc).r())
+        }
         2 => format!("COUNT(DISTINCT {})", rng.pick(sc).r()),
         3 | 4 if !nc.is_empty() => format!("SUM({})", num_expr(rng, sc, 2)),
         5 if !nc.is_empty() => format!("AVG({})", num_expr(rng, sc, 2)),
@@ -396,10 +401,13 @@ fn build(rng: &mut Rng, from: &str, sc: &[Col], mut conds: Vec<String>) -> (Stri
                 items.push(c);
             }
         }
-        if rng.chance(50) && !num_cols(sc).is_empty() {
+        // SELECT DISTINCT over plain columns only (same reason as DISTINCT aggregates in `agg`).
+        let distinct = rng.chance(25);
+        if !distinct && rng.chance(50) && !num_cols(sc).is_empty() {
             items.push(num_expr(rng, sc, 2));
         }
-        let mut sql = format!("SELECT {} FROM {from}{where_}", items.join(", "));
+        let kw = if distinct { "SELECT DISTINCT" } else { "SELECT" };
+        let mut sql = format!("{kw} {} FROM {from}{where_}", items.join(", "));
         if ordered {
             let ob: Vec<String> =
                 (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();

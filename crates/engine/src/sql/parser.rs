@@ -147,8 +147,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_select(&mut self) -> Result<Select> {
         self.expect_kw("select")?;
-        if self.is_kw("distinct") {
-            return Err(err!("unsupported SQL feature: SELECT DISTINCT"));
+        let distinct = self.eat_kw("distinct");
+        if !distinct {
+            self.eat_kw("all");
         }
         let mut star = false;
         let mut items = Vec::new();
@@ -244,7 +245,7 @@ impl<'a> Parser<'a> {
         if *self.peek() != Tok::Eof {
             return Err(self.unexpected("end of statement"));
         }
-        Ok(Select { star, items, from, joins, where_, group_by, having, order_by, limit })
+        Ok(Select { distinct, star, items, from, joins, where_, group_by, having, order_by, limit })
     }
 
     fn table_ref(&mut self) -> Result<TableRef> {
@@ -390,10 +391,11 @@ impl<'a> Parser<'a> {
             None
         } else {
             if self.eat_kw("distinct") {
-                if func != AggFunc::Count {
-                    return Err(err!("unsupported SQL feature: {}(DISTINCT ...)", name.to_ascii_uppercase()));
+                if matches!(func, AggFunc::Min | AggFunc::Max) {
+                    // MIN/MAX(DISTINCT x) = MIN/MAX(x); accepted and treated as the plain aggregate.
+                } else {
+                    distinct = true;
                 }
-                distinct = true;
             }
             Some(Box::new(self.expr()?))
         };

@@ -17,7 +17,7 @@
 
 -- id: C01 SELECT DISTINCT
 -- data: default
--- expect-error: unsupported SQL feature: SELECT DISTINCT
+-- expect-rows: a | b | NULL
 SELECT DISTINCT col FROM t;
 
 -- id: C02 conditional aggregation with CASE
@@ -32,12 +32,12 @@ SELECT col, ROUND(AVG(x), 2) FROM t GROUP BY col;
 
 -- id: C04 SUM(DISTINCT)
 -- data: default
--- expect-error: unsupported SQL feature: SUM(DISTINCT ...)
+-- expect-rows: 2
 SELECT SUM(DISTINCT x) FROM t;
 
 -- id: C05 AVG(DISTINCT)
 -- data: default
--- expect-error: unsupported SQL feature: AVG(DISTINCT ...)
+-- expect-rows: 0.6666666666666666
 SELECT AVG(DISTINCT x) FROM t;
 
 -- id: C06 COUNT(DISTINCT a, b)

@@ -332,6 +332,24 @@ fn prj06_select_star() {
 }
 
 #[test]
+fn agg03_agg04_distinct() {
+    // AGG-03 SELECT DISTINCT, rewritten to GROUP BY the select list (NULLs form one row)
+    supported("SELECT DISTINCT s FROM t");
+    supported("SELECT DISTINCT s, v FROM t WHERE id > 1");
+    supported("SELECT DISTINCT * FROM u");
+    supported("SELECT DISTINCT v + 1 AS w FROM t ORDER BY w");
+    supported("SELECT DISTINCT 2 FROM t");
+    supported("SELECT DISTINCT t.s FROM t JOIN u ON t.id = u.k ORDER BY 1 LIMIT 2");
+    supported("SELECT ALL s FROM t");
+    // AGG-04 SUM/AVG(DISTINCT) over integer, decimal and float columns, global and grouped
+    supported("SELECT SUM(DISTINCT v), AVG(DISTINCT v), COUNT(DISTINCT v) FROM t");
+    supported("SELECT SUM(DISTINCT p), AVG(DISTINCT p), SUM(DISTINCT f), AVG(DISTINCT f) FROM t");
+    supported("SELECT s, SUM(DISTINCT v), AVG(DISTINCT f) FROM t GROUP BY s");
+    supported("SELECT MIN(DISTINCT v), MAX(DISTINCT s) FROM t");
+    supported("SELECT SUM(DISTINCT v) FROM t WHERE v IS NULL");
+}
+
+#[test]
 fn flt01_not_equal_bang() {
     supported("SELECT id FROM t WHERE v != 30");
     supported("SELECT id FROM t WHERE s != 'a' ORDER BY id");
@@ -462,9 +480,8 @@ fn rejected_by_name() {
         ("JN-10", "SELECT t.id FROM t JOIN u USING (id)", Unsupported),
         ("JN-10", "SELECT t.id FROM t NATURAL JOIN u", Unsupported),
         ("JN-11", "SELECT t.id FROM t JOIN u ON t.id < u.k", Unsupported),
-        ("AGG-03", "SELECT DISTINCT s FROM t", Unsupported),
-        ("AGG-04", "SELECT SUM(DISTINCT v) FROM t", Unsupported),
-        ("AGG-04", "SELECT AVG(DISTINCT v) FROM t", Unsupported),
+        ("AGG-03", "SELECT DISTINCT COUNT(*) FROM t", Unsupported),
+        ("AGG-03", "SELECT DISTINCT s FROM t GROUP BY s, v", Unsupported),
         ("AGG-10", "SELECT STDDEV(v) FROM t", Unsupported),
         ("AGG-10", "SELECT VAR_SAMP(v) FROM t", Unsupported),
         ("AGG-11", "SELECT STRING_AGG(s, ',') FROM t", Unsupported),
