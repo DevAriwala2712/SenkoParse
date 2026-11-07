@@ -23,7 +23,7 @@ Where SQLite's behaviour comes from its dynamic typing (for example comparing a 
 | `decimal(N)` | `i64` scaled by 10ᴺ, N ≤ 18 | exact | ✅ |
 | `str` | UTF-8 bytes (validation policy: [CSV input](#csv-input)) | any length up to the row limit | ✅ |
 | `date` | days since 1970-01-01 | proleptic Gregorian, years 0001-9999 (**verify** bounds) | ✅ |
-| `bool` | true / false / NULL | expressions only today; column type planned (TYP-06) | 🟡 |
+| `bool` | true / false / NULL | expressions and a column type (`bool` in schema.toml: `true/false/t/f/yes/no/1/0`, any case; inference: `true`/`false` only) | ✅ |
 | `timestamp` | microseconds since epoch, UTC | planned (TYP-07) | ❌ |
 
 ## NULL and three-valued logic
@@ -51,7 +51,7 @@ Where SQLite's behaviour comes from its dynamic typing (for example comparing a 
 | `date` | `date` | ✅ | by day number |
 | `str` | `str` | ✅ | by bytes (see [Ordering](#ordering)) |
 | `str` | number | ⛔ | bind error (SQLite would compare by type class) |
-| `bool` | `bool` | ⛔ | `comparing boolean expressions is not supported` (FLT-08) |
+| `bool` | `bool` | ✅ | by value, `false < true` (FLT-08); `bool` against a number is a bind error |
 
 Integer literals are classified at bind time: a literal without a decimal point is an integer, with a point it is a decimal of the literal's scale, with an exponent it is `f64` (**verify** exponent handling).
 
@@ -111,19 +111,19 @@ An aggregate query with no GROUP BY returns exactly one row, even on empty input
 
 ## Cast
 
-Planned (TYP-08). Rules to adopt:
+`CAST(x AS type)`, implemented 2026-11-07 (TYP-08, `exec/eval.rs::cast`, `plan::mk_cast`; tests `surface_audit::typ08_cast` and the difftest). Type names: the schema.toml names plus `INT`/`INTEGER`/`BIGINT`, `REAL`/`DOUBLE [PRECISION]`/`FLOAT`, `TEXT`/`VARCHAR`/`STRING`, `BOOLEAN` and `DECIMAL(p, s)`/`NUMERIC(p, s)`. `DECIMAL` needs both arguments, because in schema.toml `decimal(2)` means scale 2 while in SQL `DECIMAL(2)` means precision 2. `VARCHAR(n)` is ⛔ (no length limits). `x::type` and `TRY_CAST` are not supported. NULL casts to NULL of any type.
 
 | From → to | Rule | Failure |
 |---|---|---|
-| `str` → number | trim ASCII spaces, parse the full string | error with row and column (strict); `TRY_CAST` returns NULL |
-| `f64` → `i64` | round half away from zero (**decide**: DuckDB rounds, PostgreSQL rounds, SQLite truncates) | out of range is an error |
-| number → `str` | same text as [Output](#output) | — |
-| `str` → `date` | `YYYY-MM-DD` only | error |
-| anything → `bool` | `true/false/t/f/1/0`, case-insensitive | error |
+| number → number | `i64` → `f64` exact for \|x\| ≤ 2⁵³; `f64` → `i64` and decimal → `i64` round half away from zero; `f64` → decimal rounds its shortest text (`0.285` → `0.29`); decimal → smaller scale rounds half away from zero | out of range, or more than `p` digits for `DECIMAL(p, s)`: error naming the value |
+| `str` → number, `date`, `bool` | trim ASCII spaces, parse the whole string; decimals round to the scale and accept an exponent (`1.5e2`) | error naming the value (`cannot CAST 'abc' to i64`); SQLite returns 0 |
+| anything → `str` | the [Output](#output) text, except `bool` is `true`/`false` | — |
+| `bool` ↔ `i64` | `true` = 1; nonzero is `true` | — |
+| `date` → number, `bool` → `f64`/decimal, number → `date` | not allowed | bind error `cannot CAST date to i64` |
 
 ## Type inference
 
-**First cut implemented** ([ADR-0007](adr/0007-schema-inference.md), `storage/csv/infer.rs`, tests in `tests/infer.rs`). What it does today: header plus whole rows from the first 1 MiB; `i64` → `f64` → `str` and `date` → `str`; no `bool` or `decimal(N)` inference; duplicate or empty header names are an error (no suffixes); a later misfit fails with `invalid <type> value` plus a hint to declare the table in `schema.toml`; `schema.toml` always wins; no `DESCRIBE` yet (the shell `.schema` marks inferred tables). The target rules below remain the plan for the rest of task 1.1.
+**First cut implemented** ([ADR-0007](adr/0007-schema-inference.md), `storage/csv/infer.rs`, tests in `tests/infer.rs`). What it does today: header plus whole rows from the first 1 MiB; `i64` → `f64` → `str`, `date` → `str` and `bool` → `str` (`bool` only for the spellings `true`/`false`, any case; `1`/`0` stay `i64`); no `decimal(N)` inference; duplicate or empty header names are an error (no suffixes); a later misfit fails with `invalid <type> value` plus a hint to declare the table in `schema.toml`; `schema.toml` always wins; no `DESCRIBE` yet (the shell `.schema` marks inferred tables). The target rules below remain the plan for the rest of task 1.1.
 
 The rules must make inference **deterministic** (same file, same types, every run and every thread count) and **conservative** (a later surprise is an error that names `--schema`, never a silent NULL).
 
@@ -187,5 +187,11 @@ Known places where SenkoParse deliberately differs from SQLite, DuckDB or Postgr
 | NaN | a value, sorts after +∞ (planned) | stored as NULL | sorts after +∞ | sorts after +∞ |
 | Integer overflow in `SUM` | error | error (`integer overflow`; `TOTAL()` returns REAL instead) | error, or widens to `HUGEINT` depending on type (**verify**) | error |
 | Empty quoted CSV field `""` | NULL (default) | n/a | empty string by default | n/a |
+| `CAST(x AS INTEGER)`, x = 2.5 | 3 (half away from zero, for `f64` and decimals alike) | 2 (truncates) | 3 for a decimal literal; **verify** for `DOUBLE` | 3 for `numeric`; 2 for `float8` (half to even) |
+| `CAST('abc' AS INTEGER)` | error | 0 | error | error |
+| `CAST(1.5 AS DECIMAL(10,2))` text | `1.50` | `1.5` (no decimal type) | `1.50` | `1.50` |
+| `COALESCE(x)` (one argument) | `x` | error | **verify** | `x` |
+| `bool` in output | `1` / `0` (`CAST(b AS TEXT)` gives `true`/`false`) | `1` / `0` | `true` / `false` | `t` / `f` |
+| `MIN`/`MAX` of `bool` | error | n/a (integers) | allowed | error (`bool_and`/`bool_or`) |
 
 Before a feature in this table is generated by the differential test, the test's normaliser must apply the difference (for example, generated queries always state `NULLS FIRST` or `NULLS LAST` when DuckDB is the oracle).

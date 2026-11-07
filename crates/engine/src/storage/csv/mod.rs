@@ -246,7 +246,7 @@ impl Builder {
                     v.push(b)
                 }
             }
-            ColData::Bool(_) => unreachable!(),
+            ColData::Bool(v) => v.push(parse_bool(b).ok_or_else(|| bad("bool"))?),
         }
         Ok(())
     }

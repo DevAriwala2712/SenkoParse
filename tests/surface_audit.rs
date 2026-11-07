@@ -49,6 +49,8 @@ const TABLES: &[(&str, Cols, &str)] = &[
     ),
     ("w", &[("m", "i64"), ("n", "str")], "1,m1\n2,m2\n3,m3\n7,m7\n"),
     ("x", &[("a", "i64"), ("b", "i64")], "1,1\n2,2\n2,1\n"),
+    // a declared `bool` column; SQLite stores it as 0/1 (the engine also prints bools as 1/0)
+    ("z", &[("id", "i64"), ("ok", "bool"), ("n", "i64")], "1,true,5\n2,false,\n3,,7\n4,TRUE,-2\n5,f,0\n"),
 ];
 
 /// Written once per process: rewriting a CSV while another test thread has it memory-mapped is a SIGBUS
@@ -84,7 +86,7 @@ fn sqlite() -> Connection {
             .iter()
             .map(|(c, ty)| {
                 let t = match *ty {
-                    "i64" => "INTEGER",
+                    "i64" | "bool" => "INTEGER",
                     "str" | "date" => "TEXT",
                     _ => "REAL",
                 };
@@ -101,6 +103,7 @@ fn sqlite() -> Connection {
                 .map(|(f, (_, ty))| match (f, *ty) {
                     ("", _) => SqlVal::Null,
                     (f, "i64") => SqlVal::Integer(f.parse().unwrap()),
+                    (f, "bool") => SqlVal::Integer(engine::types::parse_bool(f.as_bytes()).unwrap() as i64),
                     (f, "str" | "date") => SqlVal::Text(f.to_string()),
                     (f, _) => SqlVal::Real(f.parse().unwrap()),
                 })
@@ -385,6 +388,113 @@ fn flt04_flt05_flt06_cnd01_cnd02_in_between_like_case() {
     supported("SELECT s, CASE WHEN COUNT(*) > 1 THEN 'many' ELSE 'one' END FROM t GROUP BY s");
 }
 
+/// Rows from the engine on the default and `--no-opt` paths (asserted equal), for semantics SQLite does not share.
+fn engine_rows(sql: &str) -> Vec<Vec<Value>> {
+    let d = data_dir();
+    let run = |no_opt| {
+        let o = engine::Options { no_opt, ..Default::default() };
+        engine::run_collect_opts(&d, sql, &o).unwrap_or_else(|e| panic!("{sql}: {e}")).1
+    };
+    let rows = run(false);
+    assert_eq!(rows, run(true), "{sql}: default and --no-opt differ");
+    rows
+}
+
+#[test]
+fn cnd03_coalesce() {
+    supported("SELECT id, COALESCE(v, 0) FROM t");
+    supported("SELECT id, COALESCE(v, id, -1) FROM t");
+    supported("SELECT id, COALESCE(s, 'none') FROM t");
+    supported("SELECT id, COALESCE(p, f) FROM t");
+    supported("SELECT id, COALESCE(NULL, v) FROM t");
+    // one argument (PostgreSQL accepts it, SQLite does not): the argument itself, under its own output name
+    let e = engine_rows("SELECT COALESCE(v) FROM t WHERE id <= 2");
+    assert_eq!(e, vec![vec![Value::I64(10)], vec![Value::Null]]);
+    assert_eq!(supported_vs("SELECT COALESCE(v, NULL) FROM t", "SELECT COALESCE(v, NULL) FROM t"), vec!["COALESCE(v, NULL)"]);
+    supported("SELECT id, COALESCE(d, '2000-01-01') FROM t");
+    supported("SELECT COALESCE(s, '?') AS g, SUM(COALESCE(v, 0)) FROM t GROUP BY g");
+    supported("SELECT s, COALESCE(SUM(v), 0) FROM t GROUP BY s");
+    supported("SELECT COALESCE(MAX(v), -1) FROM t WHERE id > 100");
+    supported("SELECT id FROM t WHERE COALESCE(v, 0) > 20 ORDER BY id");
+    supported("SELECT t.id, COALESCE(u.w, 'missing') FROM t LEFT JOIN u ON t.id = u.k");
+    // mixing a number and text is a type error, not a silent conversion
+    let e = rejected("SELECT COALESCE(v, 'x') FROM t", Fails::Generic);
+    assert!(e.contains("type mismatch"), "{e}");
+}
+
+#[test]
+fn typ08_cast() {
+    // conversions where SQLite agrees
+    supported("SELECT id, CAST(v AS REAL) / 4 FROM t");
+    supported("SELECT id, CAST(v AS TEXT) FROM t");
+    supported("SELECT id, CAST(s AS TEXT), CAST(d AS TEXT) FROM t");
+    supported("SELECT CAST(v AS TEXT) AS k, COUNT(*) FROM t GROUP BY k");
+    supported("SELECT id FROM t WHERE CAST(v AS TEXT) LIKE '%0' ORDER BY id");
+    supported("SELECT id, CAST('12' AS INTEGER) + v, CAST(' 7 ' AS INTEGER) FROM t");
+    supported("SELECT id, CAST(NULL AS INTEGER), CAST(v AS INTEGER) FROM t");
+    supported("SELECT SUM(CAST(v AS REAL)), AVG(CAST(id AS DOUBLE PRECISION)) FROM t");
+    // SQLite gives DATE numeric affinity (2026), so compare with its plain-text spelling
+    supported_vs(
+        "SELECT id FROM t WHERE d >= CAST('2026-01-02' AS DATE) ORDER BY id",
+        "SELECT id FROM t WHERE d >= '2026-01-02' ORDER BY id",
+    );
+    // rounding (half away from zero, as PostgreSQL; SQLite truncates f64 -> integer)
+    let r = engine_rows(
+        "SELECT CAST(2.5 AS INTEGER), CAST(-2.5 AS INTEGER), CAST(f AS INTEGER), CAST(p AS INTEGER), \
+         CAST(f AS DECIMAL(6, 1)), CAST(p AS DECIMAL(4, 1)), CAST(0.285 AS DECIMAL(3, 2)) FROM t WHERE id = 5",
+    );
+    use Value::*;
+    assert_eq!(r, vec![vec![I64(3), I64(-3), I64(-4), I64(0), Dec(-38, 1), Dec(3, 1), Dec(29, 2)]]);
+    // just inside the limit
+    let r = engine_rows("SELECT CAST(9.99 AS DECIMAL(3, 2)), CAST(-9.994 AS DECIMAL(3, 2)) FROM t WHERE id = 1");
+    assert_eq!(r, vec![vec![Dec(999, 2), Dec(-999, 2)]]);
+    let r = engine_rows("SELECT CAST(f AS TEXT), CAST(p AS TEXT), CAST('1.5e2' AS DECIMAL(6, 1)) FROM t WHERE id = 6");
+    assert_eq!(r, vec![vec![Str("-1".into()), Str("3.00".into()), Dec(1500, 1)]]);
+    // a value that does not convert is an error naming it (SQLite returns 0)
+    for (sql, msg) in [
+        ("SELECT CAST(s AS INTEGER) FROM t", "cannot CAST 'a' to i64"),
+        ("SELECT CAST('2026-02-30' AS DATE) FROM t", "cannot CAST '2026-02-30' to date"),
+        ("SELECT CAST(1e30 AS INTEGER) FROM t", "to i64"),
+        ("SELECT CAST(v AS DECIMAL(3, 2)) FROM t", "does not fit DECIMAL(3, 2)"),
+        // exactly at the limit: rounds up to 10.00, four digits
+        ("SELECT CAST(-9.995 AS DECIMAL(3, 2)) FROM t", "value -10.00 does not fit DECIMAL(3, 2)"),
+        ("SELECT CAST(d AS INTEGER) FROM t", "cannot CAST date to i64"),
+        ("SELECT CAST(f AS BOOLEAN) FROM t", "cannot CAST f64 to bool"),
+        ("SELECT CAST(v AS DECIMAL(2)) FROM t", "DECIMAL(precision, scale)"),
+        ("SELECT CAST(v AS BLOB) FROM t", "unknown type 'blob'"),
+    ] {
+        let e = rejected(sql, Fails::Generic);
+        assert!(e.contains(msg), "{sql}: {e}");
+    }
+    let e = rejected("SELECT CAST(v AS VARCHAR(10)) FROM t", Fails::Unsupported);
+    assert!(e.contains("VARCHAR(n)"), "{e}");
+}
+
+#[test]
+fn typ06_bool_column() {
+    // a declared bool column: predicates, comparisons, grouping, ordering, NULL handling, TRUE/FALSE literals
+    supported("SELECT id, ok FROM z");
+    supported("SELECT id FROM z WHERE ok ORDER BY id");
+    supported("SELECT id FROM z WHERE NOT ok ORDER BY id");
+    supported("SELECT id FROM z WHERE ok = TRUE OR n > 6");
+    supported("SELECT id FROM z WHERE ok IS NULL");
+    supported("SELECT ok, COUNT(*), SUM(n) FROM z GROUP BY ok");
+    supported("SELECT id, ok FROM z ORDER BY ok, id");
+    supported("SELECT COUNT(ok), COUNT(DISTINCT ok) FROM z");
+    supported("SELECT id, ok = (n > 0), ok <> FALSE FROM z");
+    supported("SELECT id FROM t WHERE (v > 20) = (id > 3) ORDER BY id");
+    supported("SELECT id, CASE WHEN ok THEN 'y' ELSE 'n' END, COALESCE(ok, FALSE) FROM z");
+    supported("SELECT SUM(CAST(ok AS INTEGER)) FROM z");
+    supported("SELECT z.id, t.s FROM z JOIN t ON z.id = t.id WHERE z.ok");
+    // CAST to text spells the value; CAST from text accepts the parse_bool set
+    let r = engine_rows("SELECT CAST(ok AS TEXT), CAST('yes' AS BOOLEAN), CAST(n AS BOOLEAN) FROM z WHERE id = 2");
+    use Value::*;
+    // results of type bool are written as 1/0 (as SQLite), so `run_collect` returns them as i64
+    assert_eq!(r, vec![vec![Str("false".into()), I64(1), Null]]);
+    let e = rejected("SELECT MIN(ok) FROM z", Fails::Generic);
+    assert!(e.contains("boolean"), "{e}");
+}
+
 #[test]
 fn flt01_not_equal_bang() {
     supported("SELECT id FROM t WHERE v != 30");
@@ -464,14 +574,16 @@ fn schema_level_rows_are_errors() {
         }
         d
     };
-    // TYP-06 bool column type, TYP-07 timestamp column type
-    for (id, ty) in [("TYP-06", "bool"), ("TYP-07", "timestamp")] {
-        let d = mk(ty, Some(&format!("[t]\nid = \"i64\"\nb = \"{ty}\"\n")));
-        let e = rejected_in(&d, "SELECT id, b FROM t", Fails::Generic);
-        eprintln!("{id}: column type {ty}\n    -> {e}");
-    }
-    // SRC-03 no schema.toml: types are inferred (ADR-0007); `true` and a timestamp have no inferable type, so `b`
-    // is a string. Supported since the inference change; detailed tests in tests/infer.rs.
+    // TYP-07 timestamp column type (TYP-06 `bool` is supported now: tests `typ06_bool_column`)
+    let d = mk("timestamp", Some("[t]\nid = \"i64\"\nb = \"timestamp\"\n"));
+    let e = rejected_in(&d, "SELECT id, b FROM t", Fails::Generic);
+    eprintln!("TYP-07: column type timestamp\n    -> {e}");
+    // a declared `bool` column holding a non-boolean value is an error naming the value, not a NULL
+    let d = mk("bool", Some("[t]\nid = \"i64\"\nb = \"bool\"\n"));
+    let e = rejected_in(&d, "SELECT id, b FROM t", Fails::Generic);
+    assert!(e.contains("invalid bool value '2026-01-01T10:00:00Z'"), "{e}");
+    // SRC-03 no schema.toml: types are inferred (ADR-0007); `true` alone would infer `bool`, but next to a timestamp
+    // the column widens to a string. Supported since the inference change; detailed tests in tests/infer.rs.
     let d = mk("noschema", None);
     for no_opt in [false, true] {
         let o = engine::Options { no_opt, ..Default::default() };
@@ -496,13 +608,10 @@ fn schema_level_rows_are_errors() {
 fn rejected_by_name() {
     use Fails::*;
     check_all(&[
-        ("TYP-08", "SELECT CAST(id AS str) FROM t", Unsupported),
         ("PRJ-08", "SELECT *, id FROM t", Unsupported),
         ("FLT-06", "SELECT id FROM t WHERE s LIKE 'a!%' ESCAPE '!'", Unsupported),
         ("FLT-06", "SELECT id FROM t WHERE s LIKE s", Unsupported),
         ("FLT-07", "SELECT id FROM t WHERE s ILIKE 'a%'", Generic),
-        ("FLT-08", "SELECT id FROM t WHERE (v > 1) = (id > 1)", Generic),
-        ("CND-03", "SELECT COALESCE(v, 0) FROM t", Unsupported),
         ("CND-04", "SELECT NULLIF(v, 10) FROM t", Unsupported),
         ("CND-05", "SELECT GREATEST(v, id) FROM t", Unsupported),
         ("JN-08", "SELECT t.id FROM t RIGHT JOIN u ON t.id = u.k", Unsupported),

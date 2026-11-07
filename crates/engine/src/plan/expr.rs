@@ -32,6 +32,8 @@ pub enum BExpr {
     /// Searched CASE: the first true condition picks its result; none -> `else_` (a NULL literal if absent).
     /// All results already cast to `ty`.
     Case(Vec<(BExpr, BExpr)>, Box<BExpr>, Ty),
+    /// Precision check after `CAST(x AS DECIMAL(p, s))`: a value with more than `p` digits is an error.
+    DecPrec(Box<BExpr>, u8),
 }
 
 impl BExpr {
@@ -43,6 +45,7 @@ impl BExpr {
             | BExpr::Neg(_, t)
             | BExpr::Cast(_, t)
             | BExpr::Case(_, _, t) => *t,
+            BExpr::DecPrec(a, _) => a.ty(),
             BExpr::Not(_) | BExpr::IsNull(..) | BExpr::Like(..) => Ty::Bool,
         }
     }
@@ -55,7 +58,7 @@ impl BExpr {
                 a.cols(out);
                 b.cols(out);
             }
-            BExpr::Neg(a, _) | BExpr::Not(a) | BExpr::IsNull(a, _) | BExpr::Cast(a, _) | BExpr::Like(a, ..) => {
+            BExpr::Neg(a, _) | BExpr::Not(a) | BExpr::IsNull(a, _) | BExpr::Cast(a, _) | BExpr::Like(a, ..) | BExpr::DecPrec(a, _) => {
                 a.cols(out)
             }
             BExpr::Case(w, e, _) => {
@@ -78,6 +81,7 @@ impl BExpr {
             BExpr::IsNull(a, n) => BExpr::IsNull(Box::new(a.shift(by)), *n),
             BExpr::Cast(a, t) => BExpr::Cast(Box::new(a.shift(by)), *t),
             BExpr::Like(a, p, n) => BExpr::Like(Box::new(a.shift(by)), p.clone(), *n),
+            BExpr::DecPrec(a, p) => BExpr::DecPrec(Box::new(a.shift(by)), *p),
             BExpr::Case(w, e, t) => {
                 BExpr::Case(w.iter().map(|(c, r)| (c.shift(by), r.shift(by))).collect(), Box::new(e.shift(by)), *t)
             }

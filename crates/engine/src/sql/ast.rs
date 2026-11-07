@@ -1,3 +1,5 @@
+use crate::types::Ty;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AstOp {
     Add,
@@ -33,6 +35,14 @@ pub enum Ast {
     Num(String),
     Str(String),
     Null,
+    /// `TRUE` / `FALSE`.
+    Bool(bool),
+    /// `CAST(x AS type)`. `prec` is the precision of `DECIMAL(p, s)` (checked after the cast), `None` otherwise.
+    Cast {
+        arg: Box<Ast>,
+        ty: Ty,
+        prec: Option<u8>,
+    },
     Bin(AstOp, Box<Ast>, Box<Ast>),
     Neg(Box<Ast>),
     Not(Box<Ast>),

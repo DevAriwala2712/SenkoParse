@@ -47,6 +47,7 @@ impl Ty {
             "f64" => Some(Ty::F64),
             "str" => Some(Ty::Str),
             "date" => Some(Ty::Date),
+            "bool" | "boolean" => Some(Ty::Bool),
             _ => {
                 let inner = s.strip_prefix("decimal(")?.strip_suffix(')')?;
                 let sc: u8 = inner.trim().parse().ok()?;
@@ -103,6 +104,20 @@ pub fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     (if m <= 2 { y + 1 } else { y }, m as u32, d as u32)
+}
+
+/// Boolean text, ASCII case-insensitive: `true`/`false`, `t`/`f`, `yes`/`no`, `1`/`0` (the PostgreSQL set, without
+/// `on`/`off`). Used for `bool` CSV columns and `CAST(str AS bool)`.
+pub fn parse_bool(b: &[u8]) -> Option<bool> {
+    const T: [&[u8]; 4] = [b"true", b"t", b"yes", b"1"];
+    const F: [&[u8]; 4] = [b"false", b"f", b"no", b"0"];
+    if T.iter().any(|w| w.eq_ignore_ascii_case(b)) {
+        Some(true)
+    } else if F.iter().any(|w| w.eq_ignore_ascii_case(b)) {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 /// Strict `YYYY-MM-DD`.

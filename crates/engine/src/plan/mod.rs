@@ -47,12 +47,12 @@ pub enum Node {
 fn collect_refs(a: &Ast, out: &mut Vec<(Option<String>, String)>) {
     match a {
         Ast::Col { q, name } => out.push((q.clone(), name.clone())),
-        Ast::Num(_) | Ast::Str(_) | Ast::Null => {}
+        Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_) => {}
         Ast::Bin(_, l, r) => {
             collect_refs(l, out);
             collect_refs(r, out);
         }
-        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) => collect_refs(x, out),
+        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) | Ast::Cast { arg: x, .. } => collect_refs(x, out),
         Ast::Case { whens, else_ } => {
             for (c, r) in whens {
                 collect_refs(c, out);
@@ -74,7 +74,7 @@ fn contains_agg(a: &Ast) -> bool {
     match a {
         Ast::Agg { .. } => true,
         Ast::Bin(_, l, r) => contains_agg(l) || contains_agg(r),
-        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) => contains_agg(x),
+        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) | Ast::Cast { arg: x, .. } => contains_agg(x),
         Ast::Case { whens, else_ } => {
             whens.iter().any(|(c, r)| contains_agg(c) || contains_agg(r)) || else_.as_deref().is_some_and(contains_agg)
         }
@@ -203,9 +203,6 @@ fn mk_bin(op: AstOp, l: BExpr, r: BExpr) -> Result<BExpr> {
             b(if op == AstOp::And { BinOp::And } else { BinOp::Or }, l, r, Ty::Bool)
         }
         AstOp::Eq | AstOp::Ne | AstOp::Lt | AstOp::Le | AstOp::Gt | AstOp::Ge => {
-            if l.ty() == Ty::Bool || r.ty() == Ty::Bool {
-                return Err(err!("comparing boolean expressions is not supported"));
-            }
             let (l, r) = unify(l, r)?;
             let o = match op {
                 AstOp::Eq => BinOp::Eq,
@@ -265,6 +262,8 @@ fn bind_expr(a: &Ast, schema: &[Field]) -> Result<BExpr> {
         Ast::Num(s) => bind_num(s)?,
         Ast::Str(s) => BExpr::Lit(Value::Str(s.clone()), Ty::Str),
         Ast::Null => BExpr::Lit(Value::Null, Ty::I64),
+        Ast::Bool(v) => BExpr::Lit(Value::Bool(*v), Ty::Bool),
+        Ast::Cast { arg, ty, prec } => mk_cast(bind_expr(arg, schema)?, *ty, *prec)?,
         Ast::Bin(op, l, r) => mk_bin(*op, bind_expr(l, schema)?, bind_expr(r, schema)?)?,
         Ast::Neg(x) => mk_neg(bind_expr(x, schema)?)?,
         Ast::Not(x) => mk_not(bind_expr(x, schema)?)?,
@@ -287,6 +286,28 @@ fn mk_like(e: BExpr, pat: &str, neg: bool) -> Result<BExpr> {
     Ok(BExpr::Like(Box::new(e), pat.to_string(), neg))
 }
 
+/// `CAST(e AS to)`. Allowed: between numeric types, to and from text, and between `bool` and `i64`. Date to a
+/// number, or bool to a non-integer, is a bind-time error. The value rules (rounding, errors) are in `exec::eval::cast`.
+fn mk_cast(e: BExpr, to: Ty, prec: Option<u8>) -> Result<BExpr> {
+    if let BExpr::Lit(Value::Null, _) = e {
+        return Ok(BExpr::Lit(Value::Null, to));
+    }
+    let from = e.ty();
+    let ok = from == to
+        || (from.is_numeric() && to.is_numeric())
+        || from == Ty::Str
+        || to == Ty::Str
+        || matches!((from, to), (Ty::Bool, Ty::I64) | (Ty::I64, Ty::Bool));
+    if !ok {
+        return Err(err!("cannot CAST {} to {}", from.name(), to.name()));
+    }
+    let c = cast_to(e, to);
+    Ok(match prec {
+        Some(p) => BExpr::DecPrec(Box::new(c), p),
+        None => c,
+    })
+}
+
 /// The common type of CASE results: equal types stay; numeric types widen as in arithmetic (`i64` -> decimal
 /// -> `f64`, decimals to the larger scale); a NULL literal takes the other side's type. Anything else is an
 /// error rather than a silent conversion.
@@ -306,7 +327,7 @@ fn case_result_ty(results: &[&BExpr]) -> Result<Ty> {
                 (Ty::Dec(x), _) | (_, Ty::Dec(x)) => Ty::Dec(x),
                 _ => Ty::I64,
             },
-            Some(a) => return Err(type_err("mix in CASE results", a, t)),
+            Some(a) => return Err(type_err("mix in CASE/COALESCE results", a, t)),
         });
     }
     Ok(acc.unwrap_or(Ty::I64))
@@ -319,6 +340,22 @@ fn mk_case(whens: Vec<(BExpr, BExpr)>, else_: Option<BExpr>) -> Result<BExpr> {
         }
     }
     let else_ = else_.unwrap_or(BExpr::Lit(Value::Null, Ty::I64));
+    // A string literal next to a date result is read as a date, as in comparisons (`COALESCE(d, '2024-01-01')`).
+    let mut whens = whens;
+    let mut else_ = else_;
+    if whens.iter().map(|(_, r)| r).chain([&else_]).any(|r| r.ty() == Ty::Date) {
+        let to_date = |r: &mut BExpr| -> Result<()> {
+            if let BExpr::Lit(Value::Str(s), _) = r {
+                let d = parse_date(s.as_bytes()).ok_or_else(|| err!("'{s}' is not a valid date (YYYY-MM-DD)"))?;
+                *r = BExpr::Lit(Value::Date(d), Ty::Date);
+            }
+            Ok(())
+        };
+        for (_, r) in whens.iter_mut() {
+            to_date(r)?;
+        }
+        to_date(&mut else_)?;
+    }
     let mut all: Vec<&BExpr> = whens.iter().map(|(_, r)| r).collect();
     all.push(&else_);
     let ty = case_result_ty(&all)?;
@@ -404,13 +441,14 @@ impl AggCtx<'_> {
                 if let Some(k) = self.keys.iter().position(|x| *x == b) {
                     return Ok(BExpr::Col(k, b.ty()));
                 }
-                if matches!(a, Ast::Num(_) | Ast::Str(_) | Ast::Null) {
+                if matches!(a, Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_)) {
                     return Ok(b);
                 }
             }
         }
         Ok(match a {
-            Ast::Num(_) | Ast::Str(_) | Ast::Null => bind_expr(a, self.from)?,
+            Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_) => bind_expr(a, self.from)?,
+            Ast::Cast { arg, ty, prec } => mk_cast(self.bind_post(arg)?, *ty, *prec)?,
             Ast::Col { q, name } => {
                 resolve(self.from, q, name)?;
                 return Err(err!(

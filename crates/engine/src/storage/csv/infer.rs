@@ -30,6 +30,10 @@ fn classify(b: &[u8]) -> Ty {
         Ty::I64
     } else if parse_date(b).is_some() {
         Ty::Date
+    } else if b.eq_ignore_ascii_case(b"true") || b.eq_ignore_ascii_case(b"false") {
+        // Only the unambiguous spellings: `1`/`0` stay i64, and `t`/`f`/`yes`/`no` stay text (they are just as
+        // often codes). A declared `bool` column in schema.toml accepts the wider `parse_bool` set.
+        Ty::Bool
     } else if std::str::from_utf8(b).ok().and_then(|s| s.parse::<f64>().ok()).is_some_and(|x| x.is_finite()) {
         Ty::F64
     } else {
@@ -139,6 +143,14 @@ mod tests {
         let c = inf("a,b,c,d,e,f,g\n1,1,x,2024-01-02,1,,2024-01-02\n2,1.5,3,2024-02-03,,,5\n");
         let tys: Vec<Ty> = c.iter().map(|x| x.1).collect();
         assert_eq!(tys, vec![Ty::I64, Ty::F64, Ty::Str, Ty::Date, Ty::I64, Ty::Str, Ty::Str]);
+    }
+
+    #[test]
+    fn booleans() {
+        // only true/false (any case) infer bool; 1/0 stay i64, t/f stay text; bool next to anything else is text
+        let c = inf("a,b,c,d,e\ntrue,1,t,true,\nFALSE,0,f,x,True\n");
+        let tys: Vec<Ty> = c.iter().map(|x| x.1).collect();
+        assert_eq!(tys, vec![Ty::Bool, Ty::I64, Ty::Str, Ty::Str, Ty::Bool]);
     }
 
     #[test]
