@@ -105,14 +105,14 @@ fn errors_are_loud_and_specific() {
     assert!(err(&d, "SELECT id FROM t").contains("unterminated"));
     let d = dir("errs4", &[("t.csv", "id,s,v\n1,a,2\n")], T);
     for (sql, want) in [
-        ("SELECT id FROM t WHERE s LIKE 'a%'", "LIKE"),
+        ("SELECT id FROM t WHERE s LIKE s", "LIKE with a pattern that is not a string literal"),
         ("SELECT id FROM t RIGHT JOIN t u ON t.id = u.id", "RIGHT"),
         ("SELECT nope FROM t", "unknown column"),
         ("SELECT id FROM missing", "unknown table"),
         ("SELECT s, COUNT(*) FROM t", "GROUP BY"),
         ("SELECT id FROM t a JOIN t b ON a.id = b.id", "ambiguous"),
         ("SELECT SUM(s) FROM t", "not defined"),
-        ("SELECT DISTINCT id FROM t", "DISTINCT"),
+        ("SELECT DISTINCT COUNT(*) FROM t", "SELECT DISTINCT with GROUP BY"),
     ] {
         let e = err(&d, sql);
         assert!(e.contains(want), "{sql}: got `{e}`, wanted `{want}`");

@@ -55,6 +55,8 @@ enum Cell {
     D(i64, u8),
     S(String),
     Date(i32),
+    /// a boolean and the spelling written to the CSV (`true`, `F`, `yes`, `0`, ...)
+    B(bool, &'static str),
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -64,6 +66,7 @@ enum K {
     F,
     S,
     Dt,
+    B,
 }
 
 struct Table {
@@ -107,6 +110,7 @@ fn gen_tables(rng: &mut Rng, n: usize, clean: bool) -> Vec<Table> {
             ("f", K::F, "f64"),
             ("d", K::Dt, "date"),
             ("s", K::S, "str"),
+            ("b", K::B, "bool"),
         ],
         rows: vec![],
     };
@@ -125,7 +129,12 @@ fn gen_tables(rng: &mut Rng, n: usize, clean: bool) -> Vec<Table> {
                 _ => format!("w{}", rng.below(60)),
             })
         });
-        facts.rows.push(vec![Cell::I(i), k, g, v, p, f, d, s]);
+        let b = mn(rng, 10, |rng| {
+            let v = rng.chance(50);
+            let sp: &[&'static str] = if v { &["true", "TRUE", "t", "yes", "1"] } else { &["false", "False", "f", "NO", "0"] };
+            Cell::B(v, rng.pick(sp))
+        });
+        facts.rows.push(vec![Cell::I(i), k, g, v, p, f, d, s, b]);
     }
     let mut dim = Table {
         name: "dim",
@@ -164,6 +173,7 @@ fn cell_text(c: &Cell) -> String {
         Cell::D(x, s) => fmt_dec(*x, *s, &mut b),
         Cell::S(s) => b.extend_from_slice(s.as_bytes()),
         Cell::Date(d) => fmt_date(*d, &mut b),
+        Cell::B(_, sp) => b.extend_from_slice(sp.as_bytes()),
     }
     String::from_utf8(b).unwrap()
 }
@@ -210,13 +220,15 @@ fn write_schema(dir: &Path, tables: &[Table]) {
 
 fn load_sqlite(tables: &[Table]) -> Connection {
     let conn = Connection::open_in_memory().unwrap();
+    // LIKE is case-sensitive here (PostgreSQL, DuckDB); SQLite folds ASCII case unless told not to.
+    conn.execute_batch("PRAGMA case_sensitive_like = ON;").unwrap();
     for t in tables {
         let defs: Vec<String> = t
             .cols
             .iter()
             .map(|c| {
                 let ty = match c.1 {
-                    K::I => "INTEGER",
+                    K::I | K::B => "INTEGER",
                     K::D | K::F => "REAL",
                     K::S | K::Dt => "TEXT",
                 };
@@ -237,6 +249,7 @@ fn load_sqlite(tables: &[Table]) -> Connection {
                     Cell::D(..) => SqlVal::Real(cell_text(c).parse().unwrap()),
                     Cell::S(s) => SqlVal::Text(s.clone()),
                     Cell::Date(_) => SqlVal::Text(cell_text(c)),
+                    Cell::B(v, _) => SqlVal::Integer(*v as i64),
                 })
                 .collect();
             st.execute(rusqlite::params_from_iter(vals)).unwrap();
@@ -290,6 +303,16 @@ fn num_lit(rng: &mut Rng) -> String {
 fn num_expr(rng: &mut Rng, sc: &[Col], depth: u32) -> String {
     let nc = num_cols(sc);
     if depth == 0 || rng.chance(35) {
+        let ic: Vec<&Col> = nc.iter().copied().filter(|c| c.ty == K::I).collect();
+        if !nc.is_empty() && rng.chance(8) {
+            // COALESCE over plain columns and literals: the value is one of them, so it is as exact as a column
+            let b = if rng.chance(50) { rng.pick(&nc).r() } else { num_lit(rng) };
+            return format!("COALESCE({}, {b})", rng.pick(&nc).r());
+        }
+        if !ic.is_empty() && rng.chance(5) {
+            // integer to REAL is exact for these values in both engines
+            return format!("CAST({} AS REAL)", rng.pick(&ic).r());
+        }
         return if !nc.is_empty() && rng.chance(75) { rng.pick(&nc).r() } else { num_lit(rng) };
     }
     // `/` is always floating point in the engine, so only divide real-typed operands
@@ -303,6 +326,24 @@ fn num_expr(rng: &mut Rng, sc: &[Col], depth: u32) -> String {
     let a = num_expr(rng, sc, depth - 1);
     let b = if op == "*" { num_expr(rng, sc, 0) } else { num_expr(rng, sc, depth - 1) };
     format!("({a} {op} {b})")
+}
+
+/// `CASE WHEN p THEN a [WHEN q THEN b] [ELSE c] END` over plain columns of one kind (numbers mix freely; the
+/// engine widens them exactly as SQLite compares them). Results that are not plain columns would hit the
+/// decimal-vs-REAL artifacts described in `pred`.
+fn case_expr(rng: &mut Rng, sc: &[Col]) -> String {
+    let first = rng.pick(sc);
+    let num = |k: K| matches!(k, K::I | K::D | K::F);
+    let same: Vec<&Col> = sc.iter().filter(|c| c.ty == first.ty || (num(c.ty) && num(first.ty))).collect();
+    let mut s = format!("CASE WHEN {} THEN {}", pred(rng, sc, 1), first.r());
+    if rng.chance(40) {
+        write!(s, " WHEN {} THEN {}", pred(rng, sc, 0), rng.pick(&same).r()).unwrap();
+    }
+    if rng.chance(70) {
+        write!(s, " ELSE {}", rng.pick(&same).r()).unwrap();
+    }
+    s.push_str(" END");
+    s
 }
 
 fn cmp_op(rng: &mut Rng) -> &'static str {
@@ -327,7 +368,9 @@ fn pred(rng: &mut Rng, sc: &[Col], depth: u32) -> String {
     }
     let strs: Vec<&Col> = sc.iter().filter(|c| c.ty == K::S).collect();
     let dates: Vec<&Col> = sc.iter().filter(|c| c.ty == K::Dt).collect();
-    match rng.below(7) {
+    let bools: Vec<&Col> = sc.iter().filter(|c| c.ty == K::B).collect();
+    let ints: Vec<&Col> = sc.iter().filter(|c| c.ty == K::I).collect();
+    match rng.below(8) {
         0..=2 if !num_cols(sc).is_empty() => {
             let l = num_expr(rng, sc, 2);
             let r = if rng.chance(50) { num_lit(rng) } else { num_expr(rng, sc, 1) };
@@ -343,14 +386,77 @@ fn pred(rng: &mut Rng, sc: &[Col], depth: u32) -> String {
             }
         }
         3 if !strs.is_empty() => {
-            let c = rng.pick(&strs).r();
-            if rng.chance(25) && strs.len() > 1 {
+            // the string side is sometimes COALESCE(col, literal) or an integer column CAST to TEXT (integers print
+            // the same in both engines; reals do not, so they are never cast)
+            let c = match rng.below(10) {
+                0 => format!("COALESCE({}, {})", rng.pick(&strs).r(), sql_str(rng.pick(LIT_POOL))),
+                1 if !ints.is_empty() => format!("CAST({} AS TEXT)", rng.pick(&ints).r()),
+                _ => rng.pick(&strs).r(),
+            };
+            if c.starts_with("CAST(") {
+                // against number-like text, so a wrong spelling of the integer changes the answer
+                let n = rng.range(-50, 50);
+                match rng.below(3) {
+                    0 => format!("{c} {} '{n}'", cmp_op(rng)),
+                    1 => format!("{c} LIKE '{}%'", n.abs() % 10),
+                    _ => format!("{c} LIKE '%{}'", n.abs() % 10),
+                }
+            } else if rng.chance(25) && strs.len() > 1 {
                 format!("{c} {} {}", cmp_op(rng), rng.pick(&strs).r())
             } else {
                 format!("{c} {} {}", cmp_op(rng), sql_str(rng.pick(LIT_POOL)))
             }
         }
         4 if !dates.is_empty() => format!("{} {} {}", rng.pick(&dates).r(), cmp_op(rng), date_lit(rng)),
+        6 if !bools.is_empty() => {
+            let b = rng.pick(&bools).r();
+            match rng.below(6) {
+                0 => b,
+                1 => format!("NOT {b}"),
+                2 => format!("{b} = TRUE"),
+                3 => format!("{b} <> FALSE"),
+                4 => format!("COALESCE({b}, FALSE)"),
+                // comparing two booleans (one computed)
+                _ => format!("{b} = ({} > {})", num_expr(rng, sc, 0), num_lit(rng)),
+            }
+        }
+        // IN / BETWEEN / LIKE over plain columns and literals only (same reason as the `plain` rule above)
+        5 => {
+            let not = if rng.chance(30) { "NOT " } else { "" };
+            let nc = num_cols(sc);
+            if !strs.is_empty() && (nc.is_empty() || rng.chance(40)) {
+                let c = rng.pick(&strs).r();
+                if rng.chance(50) {
+                    let items: Vec<String> = (0..rng.range(1, 4)).map(|_| sql_str(rng.pick(LIT_POOL))).collect();
+                    format!("{c} {not}IN ({})", items.join(", "))
+                } else {
+                    let base = *rng.pick(LIT_POOL);
+                    let cut: String = base.chars().take(rng.range(0, 2) as usize).collect();
+                    let pat = match rng.below(4) {
+                        0 => format!("{cut}%"),
+                        1 => format!("%{cut}"),
+                        2 => format!("{cut}_%"),
+                        _ => format!("_{cut}%"),
+                    };
+                    // upper-case sometimes: data is lower-case, so this checks that LIKE does not fold case
+                    let pat = if rng.chance(30) { pat.to_uppercase() } else { pat };
+                    format!("{c} {not}LIKE {}", sql_str(&pat))
+                }
+            } else if !nc.is_empty() {
+                let c = rng.pick(&nc).r();
+                if rng.chance(50) {
+                    let mut items: Vec<String> = (0..rng.range(1, 4)).map(|_| num_lit(rng)).collect();
+                    if rng.chance(15) {
+                        items.push("NULL".into());
+                    }
+                    format!("{c} {not}IN ({})", items.join(", "))
+                } else {
+                    format!("{c} {not}BETWEEN {} AND {}", num_lit(rng), num_lit(rng))
+                }
+            } else {
+                format!("{} IS NULL", rng.pick(sc).r())
+            }
+        }
         _ => {
             let c = rng.pick(sc);
             format!("{} IS {}NULL", c.r(), if rng.chance(50) { "NOT " } else { "" })
@@ -363,11 +469,20 @@ fn agg(rng: &mut Rng, sc: &[Col]) -> String {
     match rng.below(9) {
         0 => "COUNT(*)".into(),
         1 => format!("COUNT({})", rng.pick(sc).r()),
+        // DISTINCT only over plain columns: a computed decimal is exact here but REAL in SQLite, so which
+        // values count as equal could differ for reasons unrelated to DISTINCT.
+        2 if !nc.is_empty() && rng.chance(50) => {
+            format!("{}(DISTINCT {})", rng.pick(&["SUM", "AVG"]), rng.pick(&nc).r())
+        }
         2 => format!("COUNT(DISTINCT {})", rng.pick(sc).r()),
+        8 if rng.chance(50) => format!("SUM(CASE WHEN {} THEN 1 ELSE 0 END)", pred(rng, sc, 1)),
         3 | 4 if !nc.is_empty() => format!("SUM({})", num_expr(rng, sc, 2)),
         5 if !nc.is_empty() => format!("AVG({})", num_expr(rng, sc, 2)),
-        6 => format!("MIN({})", rng.pick(sc).r()),
-        7 => format!("MAX({})", rng.pick(sc).r()),
+        // MIN/MAX are not defined for bool (as in PostgreSQL)
+        6 | 7 => {
+            let ord: Vec<&Col> = sc.iter().filter(|c| c.ty != K::B).collect();
+            format!("{}({})", if rng.chance(50) { "MIN" } else { "MAX" }, rng.pick(&ord).r())
+        }
         _ if !nc.is_empty() => format!("{}({})", rng.pick(&["MIN", "MAX"]), num_expr(rng, sc, 1)),
         _ => "COUNT(*)".into(),
     }
@@ -396,10 +511,16 @@ fn build(rng: &mut Rng, from: &str, sc: &[Col], mut conds: Vec<String>) -> (Stri
                 items.push(c);
             }
         }
-        if rng.chance(50) && !num_cols(sc).is_empty() {
+        // SELECT DISTINCT over plain columns only (same reason as DISTINCT aggregates in `agg`).
+        let distinct = rng.chance(25);
+        if !distinct && rng.chance(50) && !num_cols(sc).is_empty() {
             items.push(num_expr(rng, sc, 2));
         }
-        let mut sql = format!("SELECT {} FROM {from}{where_}", items.join(", "));
+        if !distinct && rng.chance(25) {
+            items.push(case_expr(rng, sc));
+        }
+        let kw = if distinct { "SELECT DISTINCT" } else { "SELECT" };
+        let mut sql = format!("{kw} {} FROM {from}{where_}", items.join(", "));
         if ordered {
             let ob: Vec<String> =
                 (1..=items.len()).map(|i| format!("{i}{}", if rng.chance(30) { " DESC" } else { "" })).collect();

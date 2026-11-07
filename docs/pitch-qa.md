@@ -34,7 +34,7 @@ Never lead with speed. It is the claim a sceptic attacks first, and on file mode
 | Can it join two big tables? | Yes. | A 1e8 × 1e8 join works today in memory; a partitioned join handles a build side larger than the limit after Phase 2. | today in memory; Phase 2 under a limit |
 | Is it correct? | Checked. | Every query runs in five configurations against SQLite on random data and queries; we publish how many and every known deviation. | today (1,500 per run); 100,000 at 1.0 |
 | What happens with SQL it doesn't support? | Error. | It names the unsupported feature and returns no rows; a wrong answer is a release blocker. | today |
-| Does it run on my CSV? | Today, with a schema. | You write a three-line `schema.toml`; type inference is the first item of Phase 1. | inference: Phase 1 |
+| Does it run on my CSV? | Yes. | Drop the CSV in a folder; types are inferred from the first 1 MiB. A `schema.toml` overrides them. | today (first cut) |
 | What did you not test? | Listed. | Cold cache, more than one stream data shape, real pipes in automated tests, and bit-identical floats between stream and file mode; the status page lists them. | today |
 | Who is it for? | Pipelines. | People on laptops and small servers who query large CSV streams without installing a database. | today |
 | Is it production-ready? | Not yet. | Here is the plan, the release criteria, and the phase we are in. | today |

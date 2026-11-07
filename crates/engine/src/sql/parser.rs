@@ -1,5 +1,6 @@
 use super::ast::*;
 use super::lexer::{Tok, Token};
+use crate::types::{Ty, MAX_SCALE};
 use crate::{err, Result};
 
 const RESERVED: &[&str] = &[
@@ -46,25 +47,12 @@ const RESERVED: &[&str] = &[
     "exists",
     "all",
     "any",
+    "true",
+    "false",
 ];
 /// Keywords we recognise only to give a clear "unsupported" error.
-const UNSUPPORTED: &[&str] = &[
-    "right",
-    "full",
-    "cross",
-    "natural",
-    "union",
-    "intersect",
-    "except",
-    "like",
-    "in",
-    "between",
-    "case",
-    "offset",
-    "using",
-    "with",
-    "exists",
-];
+const UNSUPPORTED: &[&str] =
+    &["right", "full", "cross", "natural", "union", "intersect", "except", "offset", "using", "with", "exists"];
 
 pub struct Parser<'a> {
     src: &'a str,
@@ -147,8 +135,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_select(&mut self) -> Result<Select> {
         self.expect_kw("select")?;
-        if self.is_kw("distinct") {
-            return Err(err!("unsupported SQL feature: SELECT DISTINCT"));
+        let distinct = self.eat_kw("distinct");
+        if !distinct {
+            self.eat_kw("all");
         }
         let mut star = false;
         let mut items = Vec::new();
@@ -244,7 +233,7 @@ impl<'a> Parser<'a> {
         if *self.peek() != Tok::Eof {
             return Err(self.unexpected("end of statement"));
         }
-        Ok(Select { star, items, from, joins, where_, group_by, having, order_by, limit })
+        Ok(Select { distinct, star, items, from, joins, where_, group_by, having, order_by, limit })
     }
 
     fn table_ref(&mut self) -> Result<TableRef> {
@@ -284,6 +273,48 @@ impl<'a> Parser<'a> {
             let neg = self.eat_kw("not");
             self.expect_kw("null")?;
             return Ok(Ast::IsNull(Box::new(l), neg));
+        }
+        // [NOT] IN / BETWEEN / LIKE
+        let kw_at = |p: &Self, k: usize, w: &str| matches!(&p.toks[(p.p + k).min(p.toks.len() - 1)].tok, Tok::Ident(s) if s == w);
+        let negated = kw_at(self, 0, "not") && ["in", "between", "like"].iter().any(|w| kw_at(self, 1, w));
+        if negated {
+            self.bump();
+        }
+        let wrap = |e: Ast| if negated { Ast::Not(Box::new(e)) } else { e };
+        if self.eat_kw("in") {
+            // `x IN (a, b)` is defined as `x = a OR x = b`; with NOT, `NOT (x = a OR x = b)`. This is exact SQL
+            // three-valued semantics: no match plus a NULL on either side gives NULL, not false.
+            self.expect_sym("(")?;
+            if self.is_kw("select") {
+                return Err(err!("unsupported SQL feature: IN (SELECT ...)"));
+            }
+            let mut e = Ast::Bin(AstOp::Eq, Box::new(l.clone()), Box::new(self.expr()?));
+            while self.eat_sym(",") {
+                let next = Ast::Bin(AstOp::Eq, Box::new(l.clone()), Box::new(self.expr()?));
+                e = Ast::Bin(AstOp::Or, Box::new(e), Box::new(next));
+            }
+            self.expect_sym(")")?;
+            return Ok(wrap(e));
+        }
+        if self.eat_kw("between") {
+            // `x BETWEEN a AND b` is defined as `x >= a AND x <= b` (bounds are not swapped when a > b, as in
+            // SQLite, PostgreSQL and DuckDB).
+            let lo = self.add_expr()?;
+            self.expect_kw("and")?;
+            let hi = self.add_expr()?;
+            let ge = Ast::Bin(AstOp::Ge, Box::new(l.clone()), Box::new(lo));
+            let le = Ast::Bin(AstOp::Le, Box::new(l), Box::new(hi));
+            return Ok(wrap(Ast::Bin(AstOp::And, Box::new(ge), Box::new(le))));
+        }
+        if self.eat_kw("like") {
+            let pat = match self.add_expr()? {
+                Ast::Str(s) => s,
+                _ => return Err(err!("unsupported SQL feature: LIKE with a pattern that is not a string literal")),
+            };
+            if self.is_kw("escape") {
+                return Err(err!("unsupported SQL feature: LIKE ... ESCAPE"));
+            }
+            return Ok(Ast::Like(Box::new(l), pat, negated));
         }
         let op = match self.peek() {
             Tok::Sym("=") => AstOp::Eq,
@@ -356,6 +387,14 @@ impl<'a> Parser<'a> {
                 self.bump();
                 Ok(Ast::Null)
             }
+            Tok::Ident(s) if s == "true" || s == "false" => {
+                self.bump();
+                Ok(Ast::Bool(s == "true"))
+            }
+            Tok::Ident(s) if s == "case" => {
+                self.bump();
+                self.case_expr()
+            }
             Tok::Ident(s) => {
                 if matches!(self.toks[self.p + 1].tok, Tok::Sym("(")) {
                     return self.func(&s);
@@ -370,7 +409,114 @@ impl<'a> Parser<'a> {
             _ => Err(self.unexpected("expression")),
         }
     }
+    /// After `CASE`. A simple CASE (`CASE x WHEN v THEN r`) becomes `WHEN x = v THEN r`, so a NULL `x` or `v`
+    /// never matches and falls through to ELSE, as SQL requires.
+    fn case_expr(&mut self) -> Result<Ast> {
+        let operand = if self.is_kw("when") { None } else { Some(self.expr()?) };
+        let mut whens = Vec::new();
+        while self.eat_kw("when") {
+            let c = self.expr()?;
+            let c = match &operand {
+                Some(x) => Ast::Bin(AstOp::Eq, Box::new(x.clone()), Box::new(c)),
+                None => c,
+            };
+            self.expect_kw("then")?;
+            whens.push((c, self.expr()?));
+        }
+        if whens.is_empty() {
+            return Err(self.unexpected("WHEN"));
+        }
+        let else_ = if self.eat_kw("else") { Some(Box::new(self.expr()?)) } else { None };
+        self.expect_kw("end")?;
+        Ok(Ast::Case { whens, else_ })
+    }
+
+    /// `COALESCE(a, b, ..., z)` becomes `CASE WHEN a IS NOT NULL THEN a WHEN b IS NOT NULL THEN b ... ELSE z END`,
+    /// which is its SQL definition, so it shares CASE's typing (numeric widening, no silent text conversion) and
+    /// its rule that an argument is only evaluated on the rows that reach it.
+    fn coalesce(&mut self) -> Result<Ast> {
+        self.bump();
+        self.expect_sym("(")?;
+        let mut args = vec![self.expr()?];
+        while self.eat_sym(",") {
+            args.push(self.expr()?);
+        }
+        self.expect_sym(")")?;
+        let last = args.pop().expect("at least one argument");
+        let whens = args.into_iter().map(|a| (Ast::IsNull(Box::new(a.clone()), true), a)).collect();
+        Ok(Ast::Case { whens, else_: Some(Box::new(last)) })
+    }
+
+    /// `CAST(x AS type)`.
+    fn cast(&mut self) -> Result<Ast> {
+        self.bump();
+        self.expect_sym("(")?;
+        let arg = Box::new(self.expr()?);
+        self.expect_kw("as")?;
+        let (ty, prec) = self.type_name()?;
+        self.expect_sym(")")?;
+        Ok(Ast::Cast { arg, ty, prec })
+    }
+
+    /// A type name in CAST: the schema.toml names (`i64`, `f64`, `str`, `date`, `bool`) and the common SQL
+    /// spellings. `DECIMAL` must be written `DECIMAL(precision, scale)`: in schema.toml `decimal(2)` means scale 2,
+    /// while in SQL `DECIMAL(2)` means precision 2, so the one-argument form would be ambiguous here.
+    fn type_name(&mut self) -> Result<(Ty, Option<u8>)> {
+        let Tok::Ident(name) = self.peek().clone() else { return Err(self.unexpected("type name")) };
+        self.bump();
+        if name == "double" {
+            self.eat_kw("precision");
+        }
+        let mut args: Vec<u32> = Vec::new();
+        if self.eat_sym("(") {
+            loop {
+                let Tok::Num(n) = self.peek().clone() else { return Err(self.unexpected("type parameter")) };
+                self.bump();
+                args.push(n.parse().map_err(|_| err!("bad type parameter '{n}'"))?);
+                if !self.eat_sym(",") {
+                    break;
+                }
+            }
+            self.expect_sym(")")?;
+        }
+        let upper = name.to_ascii_uppercase();
+        let plain = |t: Ty| {
+            if args.is_empty() {
+                Ok((t, None))
+            } else {
+                Err(err!("type {upper} takes no parameters"))
+            }
+        };
+        match name.as_str() {
+            "i64" | "int" | "integer" | "bigint" | "int8" => plain(Ty::I64),
+            "f64" | "real" | "double" | "float" | "float8" => plain(Ty::F64),
+            "str" | "text" | "string" => plain(Ty::Str),
+            "varchar" | "char" | "character" => {
+                if args.is_empty() {
+                    Ok((Ty::Str, None))
+                } else {
+                    Err(err!("unsupported SQL feature: {upper}(n) length limits (use TEXT)"))
+                }
+            }
+            "date" => plain(Ty::Date),
+            "bool" | "boolean" => plain(Ty::Bool),
+            "decimal" | "numeric" => match args[..] {
+                [p, s] if (1..=MAX_SCALE as u32).contains(&p) && s <= p => Ok((Ty::Dec(s as u8), Some(p as u8))),
+                [_, _] => Err(err!(
+                    "{upper}(precision, scale) needs 1 <= precision <= {MAX_SCALE} and scale <= precision"
+                )),
+                _ => Err(err!("write {upper}(precision, scale), for example {upper}(18, 2)")),
+            },
+            _ => Err(err!("unknown type '{name}' in CAST")),
+        }
+    }
+
     fn func(&mut self, name: &str) -> Result<Ast> {
+        match name {
+            "coalesce" => return self.coalesce(),
+            "cast" => return self.cast(),
+            _ => {}
+        }
         let func = match name {
             "count" => AggFunc::Count,
             "sum" => AggFunc::Sum,
@@ -390,10 +536,11 @@ impl<'a> Parser<'a> {
             None
         } else {
             if self.eat_kw("distinct") {
-                if func != AggFunc::Count {
-                    return Err(err!("unsupported SQL feature: {}(DISTINCT ...)", name.to_ascii_uppercase()));
+                if matches!(func, AggFunc::Min | AggFunc::Max) {
+                    // MIN/MAX(DISTINCT x) = MIN/MAX(x); accepted and treated as the plain aggregate.
+                } else {
+                    distinct = true;
                 }
-                distinct = true;
             }
             Some(Box::new(self.expr()?))
         };

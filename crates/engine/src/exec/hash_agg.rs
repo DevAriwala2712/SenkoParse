@@ -140,10 +140,43 @@ fn update(st: &mut St, call: &AggCall, col: &Column, i: usize, buf: &mut Vec<u8>
     }
 }
 
+/// `SUM(DISTINCT x)` / `AVG(DISTINCT x)` from the set of distinct non-NULL keys (`Column::encode_key`: a `1`
+/// byte, then the value's 8 little-endian bytes for i64, decimal and f64 bits). Integer and decimal sums are
+/// exact in i128, so set iteration order cannot matter. f64 values are sorted (total order) before the Kahan
+/// sum, because the set's iteration order depends on insertion history, i.e. on chunking and threads.
+fn distinct_sum_avg(set: &FxSet<Box<[u8]>>, call: &AggCall) -> Result<Value> {
+    if set.is_empty() {
+        return Ok(Value::Null);
+    }
+    let word = |k: &[u8]| u64::from_le_bytes(k[1..9].try_into().expect("8-byte numeric key"));
+    let in_ty = call.arg.as_ref().map(BExpr::ty).expect("SUM/AVG have an argument");
+    let n = set.len() as f64;
+    if in_ty == Ty::F64 {
+        let mut v: Vec<f64> = set.iter().map(|k| f64::from_bits(word(k))).collect();
+        v.sort_by(f64::total_cmp);
+        let (mut s, mut c) = (0.0, 0.0);
+        for x in v {
+            kadd(&mut s, &mut c, x);
+        }
+        return Ok(Value::F64(if call.func == AggFunc::Avg { (s + c) / n } else { s + c }));
+    }
+    let s: i128 = set.iter().map(|k| word(k) as i64 as i128).sum();
+    if call.func == AggFunc::Avg {
+        let scale = if let Ty::Dec(sc) = in_ty { sc } else { 0 };
+        return Ok(Value::F64(s as f64 / n / POW10[scale as usize] as f64));
+    }
+    let v = checked_i64(s, "SUM")?;
+    Ok(match call.out_ty {
+        Ty::Dec(sc) => Value::Dec(v, sc),
+        _ => Value::I64(v),
+    })
+}
+
 fn finish(st: &St, call: &AggCall) -> Result<Value> {
     Ok(match st {
         St::Count(n) => Value::I64(*n),
-        St::Distinct(s) => Value::I64(s.len() as i64),
+        St::Distinct(s) if call.func == AggFunc::Count => Value::I64(s.len() as i64),
+        St::Distinct(s) => distinct_sum_avg(s, call)?,
         St::SumI { s, any } => {
             if !*any {
                 Value::Null

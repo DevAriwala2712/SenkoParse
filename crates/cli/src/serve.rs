@@ -276,8 +276,11 @@ fn progress_json() -> String {
     )
 }
 
+/// A data directory: has a `schema.toml` or at least one `.csv` file (types inferred, ADR-0007).
 fn has_schema(p: &std::path::Path) -> bool {
     p.join("schema.toml").is_file()
+        || std::fs::read_dir(p)
+            .is_ok_and(|rd| rd.flatten().any(|e| e.path().extension().is_some_and(|x| x.eq_ignore_ascii_case("csv"))))
 }
 
 fn set_datadir(srv: &Srv, want: &str) -> Result<(), String> {
@@ -286,14 +289,14 @@ fn set_datadir(srv: &Srv, want: &str) -> Result<(), String> {
     }
     let p = std::fs::canonicalize(want).map_err(|e| format!("cannot open {want}: {e}"))?;
     if !p.is_dir() || !has_schema(&p) {
-        return Err(format!("{} has no schema.toml", p.display()));
+        return Err(format!("{} has no schema.toml and no .csv files", p.display()));
     }
     Catalog::load(&p).map_err(|e| e.to_string())?;
     *srv.data.lock().unwrap_or_else(|e| e.into_inner()) = p;
     Ok(())
 }
 
-/// Directories that look like databases (contain schema.toml): the current one, its siblings, and the
+/// Directories that look like databases (contain schema.toml or a .csv file): the current one, its siblings, and the
 /// children of the working directory. One level only; nothing is read beyond a directory listing.
 fn databases_json(srv: &Srv) -> String {
     let cur = std::fs::canonicalize(&*srv.data.lock().unwrap_or_else(|e| e.into_inner())).unwrap_or_default();

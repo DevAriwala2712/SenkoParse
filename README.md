@@ -67,11 +67,13 @@ python3 scripts/gen_data.py --rows 1e7            # ~1.2 GB into data/ (tables x
   "SELECT s.id4, SUM(x.v1) FROM x JOIN small s ON x.id1 = s.id1 GROUP BY s.id4 ORDER BY 1"
 ```
 
-Schema comes from a `schema.toml` next to the CSVs. There is no type sniffing:
+Any `<name>.csv` in the data directory is table `<name>`. Column types are inferred from the header and the first
+1 MiB (`i64`, `f64`, `date`, `bool` for `true`/`false`, else `str`; see [ADR-0007](docs/adr/0007-schema-inference.md)). To fix a type (for
+example `decimal(2)`, or `str` to keep leading zeros), declare the table in a `schema.toml`; it always wins:
 
 ```toml
 [x]                      # file is x.csv
-id1 = "i64"              # i64 | f64 | decimal(N) | str | date
+id1 = "i64"              # i64 | f64 | decimal(N) | str | date | bool
 v1  = "f64"
 ```
 
@@ -158,7 +160,7 @@ Full tour: [docs/architecture.md](docs/architecture.md).
 
 ### Supported SQL
 
-`SELECT` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
+`SELECT [DISTINCT]` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)`, `SUM(DISTINCT col)`, `AVG(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`/`NOT`, comparisons, `IS [NOT] NULL`, `[NOT] IN (list)`, `[NOT] BETWEEN`, `[NOT] LIKE 'pattern'` (case-sensitive) · `CASE WHEN ... THEN ... [ELSE ...] END`, `CASE x WHEN v ...`, `COALESCE(a, b, ...)` and `CAST(x AS type)` anywhere an expression is allowed; `TRUE`/`FALSE` and bool comparisons · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
 Not supported: `t.*`, `*` mixed with other items, `IN (SELECT ...)`, window functions, anything else. Per-feature state with the test for each: [docs/sql-surface.md](docs/sql-surface.md).
 
 ### Correctness rules the engine enforces

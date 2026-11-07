@@ -47,12 +47,21 @@ pub enum Node {
 fn collect_refs(a: &Ast, out: &mut Vec<(Option<String>, String)>) {
     match a {
         Ast::Col { q, name } => out.push((q.clone(), name.clone())),
-        Ast::Num(_) | Ast::Str(_) | Ast::Null => {}
+        Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_) => {}
         Ast::Bin(_, l, r) => {
             collect_refs(l, out);
             collect_refs(r, out);
         }
-        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) => collect_refs(x, out),
+        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) | Ast::Cast { arg: x, .. } => collect_refs(x, out),
+        Ast::Case { whens, else_ } => {
+            for (c, r) in whens {
+                collect_refs(c, out);
+                collect_refs(r, out);
+            }
+            if let Some(e) = else_ {
+                collect_refs(e, out);
+            }
+        }
         Ast::Agg { arg, .. } => {
             if let Some(x) = arg {
                 collect_refs(x, out)
@@ -65,7 +74,10 @@ fn contains_agg(a: &Ast) -> bool {
     match a {
         Ast::Agg { .. } => true,
         Ast::Bin(_, l, r) => contains_agg(l) || contains_agg(r),
-        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) => contains_agg(x),
+        Ast::Neg(x) | Ast::Not(x) | Ast::IsNull(x, _) | Ast::Like(x, ..) | Ast::Cast { arg: x, .. } => contains_agg(x),
+        Ast::Case { whens, else_ } => {
+            whens.iter().any(|(c, r)| contains_agg(c) || contains_agg(r)) || else_.as_deref().is_some_and(contains_agg)
+        }
         _ => false,
     }
 }
@@ -191,9 +203,6 @@ fn mk_bin(op: AstOp, l: BExpr, r: BExpr) -> Result<BExpr> {
             b(if op == AstOp::And { BinOp::And } else { BinOp::Or }, l, r, Ty::Bool)
         }
         AstOp::Eq | AstOp::Ne | AstOp::Lt | AstOp::Le | AstOp::Gt | AstOp::Ge => {
-            if l.ty() == Ty::Bool || r.ty() == Ty::Bool {
-                return Err(err!("comparing boolean expressions is not supported"));
-            }
             let (l, r) = unify(l, r)?;
             let o = match op {
                 AstOp::Eq => BinOp::Eq,
@@ -253,12 +262,116 @@ fn bind_expr(a: &Ast, schema: &[Field]) -> Result<BExpr> {
         Ast::Num(s) => bind_num(s)?,
         Ast::Str(s) => BExpr::Lit(Value::Str(s.clone()), Ty::Str),
         Ast::Null => BExpr::Lit(Value::Null, Ty::I64),
+        Ast::Bool(v) => BExpr::Lit(Value::Bool(*v), Ty::Bool),
+        Ast::Cast { arg, ty, prec } => mk_cast(bind_expr(arg, schema)?, *ty, *prec)?,
         Ast::Bin(op, l, r) => mk_bin(*op, bind_expr(l, schema)?, bind_expr(r, schema)?)?,
         Ast::Neg(x) => mk_neg(bind_expr(x, schema)?)?,
         Ast::Not(x) => mk_not(bind_expr(x, schema)?)?,
         Ast::IsNull(x, neg) => BExpr::IsNull(Box::new(bind_expr(x, schema)?), *neg),
+        Ast::Like(x, p, neg) => mk_like(bind_expr(x, schema)?, p, *neg)?,
+        Ast::Case { whens, else_ } => {
+            let w =
+                whens.iter().map(|(c, r)| Ok((bind_expr(c, schema)?, bind_expr(r, schema)?))).collect::<Result<_>>()?;
+            let e = else_.as_ref().map(|e| bind_expr(e, schema)).transpose()?;
+            mk_case(w, e)?
+        }
         Ast::Agg { .. } => return Err(err!("aggregate functions are not allowed here")),
     })
+}
+
+fn mk_like(e: BExpr, pat: &str, neg: bool) -> Result<BExpr> {
+    if e.ty() != Ty::Str {
+        return Err(err!("LIKE requires a string, found {}", e.ty().name()));
+    }
+    Ok(BExpr::Like(Box::new(e), pat.to_string(), neg))
+}
+
+/// `CAST(e AS to)`. Allowed: between numeric types, to and from text, and between `bool` and `i64`. Date to a
+/// number, or bool to a non-integer, is a bind-time error. The value rules (rounding, errors) are in `exec::eval::cast`.
+fn mk_cast(e: BExpr, to: Ty, prec: Option<u8>) -> Result<BExpr> {
+    if let BExpr::Lit(Value::Null, _) = e {
+        return Ok(BExpr::Lit(Value::Null, to));
+    }
+    let from = e.ty();
+    let ok = from == to
+        || (from.is_numeric() && to.is_numeric())
+        || from == Ty::Str
+        || to == Ty::Str
+        || matches!((from, to), (Ty::Bool, Ty::I64) | (Ty::I64, Ty::Bool));
+    if !ok {
+        return Err(err!("cannot CAST {} to {}", from.name(), to.name()));
+    }
+    let c = cast_to(e, to);
+    Ok(match prec {
+        Some(p) => BExpr::DecPrec(Box::new(c), p),
+        None => c,
+    })
+}
+
+/// The common type of CASE results: equal types stay; numeric types widen as in arithmetic (`i64` -> decimal
+/// -> `f64`, decimals to the larger scale); a NULL literal takes the other side's type. Anything else is an
+/// error rather than a silent conversion.
+fn case_result_ty(results: &[&BExpr]) -> Result<Ty> {
+    let mut acc: Option<Ty> = None;
+    for r in results {
+        if matches!(r, BExpr::Lit(Value::Null, _)) {
+            continue;
+        }
+        let t = r.ty();
+        acc = Some(match acc {
+            None => t,
+            Some(a) if a == t => a,
+            Some(a) if a.is_numeric() && t.is_numeric() => match (a, t) {
+                (Ty::F64, _) | (_, Ty::F64) => Ty::F64,
+                (Ty::Dec(x), Ty::Dec(y)) => Ty::Dec(x.max(y)),
+                (Ty::Dec(x), _) | (_, Ty::Dec(x)) => Ty::Dec(x),
+                _ => Ty::I64,
+            },
+            Some(a) => return Err(type_err("mix in CASE/COALESCE results", a, t)),
+        });
+    }
+    Ok(acc.unwrap_or(Ty::I64))
+}
+
+fn mk_case(whens: Vec<(BExpr, BExpr)>, else_: Option<BExpr>) -> Result<BExpr> {
+    for (c, _) in &whens {
+        if c.ty() != Ty::Bool && !matches!(c, BExpr::Lit(Value::Null, _)) {
+            return Err(err!("CASE WHEN condition must be boolean, found {}", c.ty().name()));
+        }
+    }
+    let else_ = else_.unwrap_or(BExpr::Lit(Value::Null, Ty::I64));
+    // A string literal next to a date result is read as a date, as in comparisons (`COALESCE(d, '2024-01-01')`).
+    let mut whens = whens;
+    let mut else_ = else_;
+    if whens.iter().map(|(_, r)| r).chain([&else_]).any(|r| r.ty() == Ty::Date) {
+        let to_date = |r: &mut BExpr| -> Result<()> {
+            if let BExpr::Lit(Value::Str(s), _) = r {
+                let d = parse_date(s.as_bytes()).ok_or_else(|| err!("'{s}' is not a valid date (YYYY-MM-DD)"))?;
+                *r = BExpr::Lit(Value::Date(d), Ty::Date);
+            }
+            Ok(())
+        };
+        for (_, r) in whens.iter_mut() {
+            to_date(r)?;
+        }
+        to_date(&mut else_)?;
+    }
+    let mut all: Vec<&BExpr> = whens.iter().map(|(_, r)| r).collect();
+    all.push(&else_);
+    let ty = case_result_ty(&all)?;
+    let fit = |e: BExpr| match e {
+        BExpr::Lit(Value::Null, _) => BExpr::Lit(Value::Null, ty),
+        e => cast_to(e, ty),
+    };
+    let whens = whens
+        .into_iter()
+        .map(|(c, r)| {
+            // `WHEN NULL` never matches; bind it as a typed NULL boolean
+            let c = if matches!(c, BExpr::Lit(Value::Null, _)) { BExpr::Lit(Value::Null, Ty::Bool) } else { c };
+            (c, fit(r))
+        })
+        .collect();
+    Ok(BExpr::Case(whens, Box::new(fit(else_)), ty))
 }
 
 fn mk_neg(e: BExpr) -> Result<BExpr> {
@@ -328,13 +441,14 @@ impl AggCtx<'_> {
                 if let Some(k) = self.keys.iter().position(|x| *x == b) {
                     return Ok(BExpr::Col(k, b.ty()));
                 }
-                if matches!(a, Ast::Num(_) | Ast::Str(_) | Ast::Null) {
+                if matches!(a, Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_)) {
                     return Ok(b);
                 }
             }
         }
         Ok(match a {
-            Ast::Num(_) | Ast::Str(_) | Ast::Null => bind_expr(a, self.from)?,
+            Ast::Num(_) | Ast::Str(_) | Ast::Null | Ast::Bool(_) => bind_expr(a, self.from)?,
+            Ast::Cast { arg, ty, prec } => mk_cast(self.bind_post(arg)?, *ty, *prec)?,
             Ast::Col { q, name } => {
                 resolve(self.from, q, name)?;
                 return Err(err!(
@@ -348,6 +462,18 @@ impl AggCtx<'_> {
             Ast::Neg(x) => mk_neg(self.bind_post(x)?)?,
             Ast::Not(x) => mk_not(self.bind_post(x)?)?,
             Ast::IsNull(x, n) => BExpr::IsNull(Box::new(self.bind_post(x)?), *n),
+            Ast::Like(x, p, neg) => mk_like(self.bind_post(x)?, p, *neg)?,
+            Ast::Case { whens, else_ } => {
+                let mut w = Vec::with_capacity(whens.len());
+                for (c, r) in whens {
+                    w.push((self.bind_post(c)?, self.bind_post(r)?));
+                }
+                let e = match else_ {
+                    Some(e) => Some(self.bind_post(e)?),
+                    None => None,
+                };
+                mk_case(w, e)?
+            }
             Ast::Agg { .. } => unreachable!(),
         })
     }
@@ -525,19 +651,33 @@ pub fn bind(stmt: &Select, cat: &Catalog) -> Result<(Plan, Vec<String>)> {
         })
         .collect();
 
-    let is_agg = !stmt.group_by.is_empty()
+    let mut is_agg = !stmt.group_by.is_empty()
         || stmt.having.is_some()
         || items.iter().any(|i| contains_agg(&i.expr))
         || stmt.order_by.iter().any(|(a, _)| contains_agg(a));
+
+    // SELECT DISTINCT e1, ..., en  ==  SELECT e1, ..., en ... GROUP BY e1, ..., en. Valid because each output
+    // row is then exactly one group key, groups are distinct by construction, and all NULLs of a key form one
+    // group, which is what DISTINCT requires (NULLs compare as equal for DISTINCT). Only the plain form is
+    // rewritten: with GROUP BY, HAVING or aggregates, DISTINCT would apply to the aggregated rows, a second
+    // grouping this binder does not build.
+    let mut group_by = stmt.group_by.clone();
+    if stmt.distinct {
+        if is_agg {
+            return Err(err!("unsupported SQL feature: SELECT DISTINCT with GROUP BY, HAVING or aggregates"));
+        }
+        group_by = items.iter().map(|i| i.expr.clone()).collect();
+        is_agg = true;
+    }
 
     let from_schema = plan.schema.clone();
     let mut actx = AggCtx { from: &from_schema, keys: vec![], aggs: vec![] };
     let mut outs: Vec<BExpr> = Vec::new();
 
     if is_agg {
-        for g in &stmt.group_by {
+        for g in &group_by {
             let g = match g {
-                Ast::Num(n) => {
+                Ast::Num(n) if !stmt.distinct => {
                     let k: usize = n.parse().map_err(|_| err!("bad GROUP BY ordinal"))?;
                     items
                         .get(k.wrapping_sub(1))

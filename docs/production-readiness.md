@@ -34,7 +34,7 @@ v1 was written without access to the code ("I have not seen the current code"). 
 | 3 | Compare every feature with DuckDB | The existing oracle is **SQLite** (`tests/difftest.rs`, 5 engine configurations). v2 keeps SQLite as the primary oracle and adds DuckDB as a second oracle for features SQLite lacks, with a normalisation layer ([correctness.md](correctness.md)). |
 | 4 | Flags beyond `--data`, `--stdin`, `--threads` are proposed | The CLI already has `--no-opt`, `--chunk-bytes`, `--progress`, `--table`, `--file`, `--shell`, `--serve`, `--port`. v2 lists real versus proposed flags in [cli.md](cli.md). |
 | 5 | "Filters and small joins run in constant memory" | True for **anonymous** memory in stream mode on one measured query. File mode memory-maps whole inputs, so its RSS is about the input size (5.4 GB RSS on a 5.55 GB file at 1e8). v2 defines memory precisely and plans for both modes ([memory-model.md](memory-model.md)). |
-| 6 | Types include BOOL and TIMESTAMP, with type inference | Today: `i64`, `f64`, `decimal(N)`, `str`, `date`, declared in a **required** `schema.toml`. No inference, no timestamp, no boolean column type. Inference becomes P0 because a judge or user arriving with their own CSV cannot run anything today. |
+| 6 | Types include BOOL and TIMESTAMP, with type inference | Today: `i64`, `f64`, `decimal(N)`, `str`, `date`, declared in a **required** `schema.toml`. No inference, no timestamp, no boolean column type (2026-11-07: inference first cut and `bool` done; timestamp still missing). Inference becomes P0 because a judge or user arriving with their own CSV cannot run anything today. |
 | 7 | One flat feature table | Each feature now has an ID, a measured "today" state with evidence, and a named acceptance test ([sql-surface.md](sql-surface.md)). |
 | 8 | No requirement IDs, risks or decisions | Added [requirements](#3-requirements), a [risk register](#13-risk-register), [open decisions](#14-open-decisions), effort estimates and a [scorecard](#15-scorecard). |
 | 9 | No security section beyond "no injection surface" | Added a threat model covering hostile CSV, hash flooding (the hash is unkeyed Fx), the `--serve` web UI, temp files and the supply chain ([section 9](#9-input-robustness-and-security)). |
@@ -113,8 +113,8 @@ Snapshot of `main` at `f80c6e0`. Full per-feature detail is in [sql-surface.md](
 
 | Rank | Gap | Effect on a user | Section |
 |---|---|---|---|
-| 1 | `schema.toml` is required; no type inference | Any new CSV fails with `cannot read schema.toml` or `unknown table` | [9](#9-input-robustness-and-security), SRC-03 |
-| 2 | No `SELECT DISTINCT`, `SUM(DISTINCT)`, `CASE`, `IN`, `BETWEEN`, `LIKE`, `OFFSET`, scalar functions (`ROUND`, `LOWER`, ...) | Common judge and user queries are rejected (with a clear error, which is the right failure) | [4](#4-sql-surface) |
+| 1 | ~~`schema.toml` is required; no type inference~~ First cut done 2026-11-07 (ADR-0007): a plain CSV runs; still missing `DESCRIBE`, `decimal` inference, mid-file samples (`bool` inference added with task 1.4) | Was: any new CSV failed with `cannot read schema.toml` or `unknown table` | [9](#9-input-robustness-and-security), SRC-03 |
+| 2 | No ~~`SELECT DISTINCT`, `SUM(DISTINCT)`~~ (done 2026-11-07, task 1.3), ~~`CASE`, `IN`, `BETWEEN`, `LIKE`, `COALESCE`, `CAST`, `bool`~~ (done 2026-11-07, task 1.4), `OFFSET`, scalar functions (`ROUND`, `LOWER`, ...) | Common judge and user queries are rejected (with a clear error, which is the right failure) | [4](#4-sql-surface) |
 | 3 | No memory budget, no spill; sort is fully in memory; join build side fully in memory | High-cardinality GROUP BY or a big join over a pipe can exhaust RAM | [6](#6-architecture-and-memory-model) |
 | 4 | File-mode RSS is about the input size (mmap) | "Bounded memory" is false for file mode as RSS is usually measured | [memory-model.md](memory-model.md) |
 | 5 | No CI, no `LICENSE`, no release binaries | Nobody can safely depend on it or contribute | [11](#11-release-engineering) |
@@ -215,9 +215,9 @@ The full matrix, with today's state for every feature, lives in [sql-surface.md]
 | Area | Today | P0 target | P1 target |
 |---|---|---|---|
 | Sources | named files via `schema.toml`, one `--stdin` table | schema inference, any path via a `--src name=path` flag (name to decide, [cli.md](cli.md)) | gzip/zstd built in, multiple pipes via named FIFOs |
-| Types | `i64`, `f64`, `decimal(N)`, `str`, `date` | `bool`, `CAST` | `timestamp`, interval arithmetic on dates |
+| Types | `i64`, `f64`, `decimal(N)`, `str`, `date`, `bool` (2026-11-07), `CAST` (2026-11-07) | — | `timestamp`, interval arithmetic on dates |
 | Projection and filter | columns, aliases, `+ - * /`, comparisons, `AND OR NOT`, `IS [NOT] NULL` | `IN` list, `BETWEEN`, `LIKE`, `t.*` (bare `SELECT *` already works, PRJ-06) | `ILIKE`, `\|\|`, `NOT IN` with NULL semantics |
-| Conditional | none | `CASE`, `COALESCE` | `NULLIF`, `IIF` |
+| Conditional | `CASE`, `COALESCE` (2026-11-07) | — | `NULLIF`, `IIF` |
 | Joins | `INNER`, `LEFT`, comma join, equality keys | self-join and 3+-way tests | `RIGHT`, `FULL`, `CROSS`, `USING`, non-equi conditions as a filter |
 | Aggregation | `COUNT`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT)`, GROUP BY expr/ordinal/alias, HAVING | `SELECT DISTINCT`, `SUM/AVG(DISTINCT)` | statistics, `STRING_AGG`, `FILTER`, exact `MEDIAN` |
 | Ordering | multi-key, ASC/DESC, `LIMIT`, full in-memory sort | `OFFSET`, `NULLS FIRST/LAST`, top-N | external sort |
@@ -253,8 +253,8 @@ Every aggregate is implemented against one interface so that parallel merge, spi
 | `SUM`, `AVG` on `f64` | P0 | ✅ Kahan | sum + compensation + count | order-sensitive | `NaN`, `±inf`, catastrophic cancellation; bit-identical across threads |
 | `MIN`, `MAX` | P0 | ✅ | one value | exact except `f64` | text byte order; `-0.0` vs `0.0`; `NaN` (see [semantics.md](semantics.md#ordering)) |
 | `COUNT(DISTINCT col)` | P0 | ✅ in memory | set of keys, unbounded | exact | 10M distinct values under a 256 MB limit (must spill) |
-| `SELECT DISTINCT` | P0 | ❌ | rewrite to GROUP BY all columns | exact | equals GROUP BY on all columns, NULL as one value |
-| `SUM/AVG(DISTINCT)` | P0 | ❌ | set of values | exact for integers, order-sensitive for `f64` | duplicates across chunks |
+| `SELECT DISTINCT` | P0 | ✅ (task 1.3) | rewrite to GROUP BY all columns | exact | equals GROUP BY on all columns, NULL as one value |
+| `SUM/AVG(DISTINCT)` | P0 | ✅ (task 1.3; f64 summed in sorted order) | set of values | exact for integers, order-sensitive for `f64` | duplicates across chunks |
 | `STDDEV_SAMP/POP`, `VAR_SAMP/POP` | P1 | ❌ | count, mean, M2 (Welford; Chan et al. for merge) | order-sensitive | one row gives NULL for sample variance |
 | `STRING_AGG(x, sep [ORDER BY ...])` | P1 | ❌ | list, unbounded | order-sensitive by definition | separator, order inside the group, NULLs skipped |
 | `ANY_VALUE`, `ARG_MIN`, `ARG_MAX` | P1 | ❌ | one or two values | `ANY_VALUE` must still be deterministic | ties: lowest chunk index then row number wins |

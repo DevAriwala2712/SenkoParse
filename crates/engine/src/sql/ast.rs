@@ -1,3 +1,5 @@
+use crate::types::Ty;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AstOp {
     Add,
@@ -33,10 +35,25 @@ pub enum Ast {
     Num(String),
     Str(String),
     Null,
+    /// `TRUE` / `FALSE`.
+    Bool(bool),
+    /// `CAST(x AS type)`. `prec` is the precision of `DECIMAL(p, s)` (checked after the cast), `None` otherwise.
+    Cast {
+        arg: Box<Ast>,
+        ty: Ty,
+        prec: Option<u8>,
+    },
     Bin(AstOp, Box<Ast>, Box<Ast>),
     Neg(Box<Ast>),
     Not(Box<Ast>),
     IsNull(Box<Ast>, bool),
+    /// `x [NOT] LIKE 'pattern'` (pattern is a string literal; `%` any run, `_` one character, case-sensitive).
+    Like(Box<Ast>, String, bool),
+    /// Searched CASE; a simple `CASE x WHEN v ...` is desugared by the parser to `WHEN x = v`.
+    Case {
+        whens: Vec<(Ast, Ast)>,
+        else_: Option<Box<Ast>>,
+    },
     /// `arg == None` means `COUNT(*)`.
     Agg {
         func: AggFunc,
@@ -76,6 +93,8 @@ pub struct Join {
 
 #[derive(Clone, Debug)]
 pub struct Select {
+    /// `SELECT DISTINCT`: rewritten by the binder to GROUP BY the select list.
+    pub distinct: bool,
     pub star: bool,
     pub items: Vec<SelectItem>,
     pub from: TableRef,
