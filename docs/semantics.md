@@ -122,7 +122,9 @@ Planned (TYP-08). Rules to adopt:
 
 ## Type inference
 
-Planned (SRC-03, decision D-5). The rules must make inference **deterministic** (same file, same types, every run and every thread count) and **conservative** (a later surprise is an error that names `--schema`, never a silent NULL).
+**First cut implemented** ([ADR-0007](adr/0007-schema-inference.md), `storage/csv/infer.rs`, tests in `tests/infer.rs`). What it does today: header plus whole rows from the first 1 MiB; `i64` → `f64` → `str` and `date` → `str`; no `bool` or `decimal(N)` inference; duplicate or empty header names are an error (no suffixes); a later misfit fails with `invalid <type> value` plus a hint to declare the table in `schema.toml`; `schema.toml` always wins; no `DESCRIBE` yet (the shell `.schema` marks inferred tables). The target rules below remain the plan for the rest of task 1.1.
+
+The rules must make inference **deterministic** (same file, same types, every run and every thread count) and **conservative** (a later surprise is an error that names `--schema`, never a silent NULL).
 
 1. Read the header. Column names are lowercased (as `schema.toml` does today); duplicate names get suffixes `_2`, `_3` with a warning on stderr.
 2. Sample: the first 10,000 rows, plus 1,000 rows from the start of each of up to 16 evenly spaced chunks in file mode. In stream mode only the start of the stream can be sampled, so stream inference is weaker; this is stated.

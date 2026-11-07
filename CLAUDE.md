@@ -42,7 +42,7 @@ python3 bench/run.py --rows 1e8              # timings vs DuckDB, appends to BEN
 Keep these commands working. Update this section if any change.
 
 ## Supported SQL (scope — reject anything else with a clear error)
-`SELECT` columns or a bare `*`, expressions (+ − × ÷, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables (file name = table name) · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`. Schema comes from a `schema.toml` next to the data (column names, types: i64, f64, decimal(scale), str, date); no type sniffing.
+`SELECT` columns or a bare `*`, expressions (+ − × ÷, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)` · `FROM` one or more CSV tables (file name = table name) · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`. Schema: a `schema.toml` next to the data (column names, types: i64, f64, decimal(scale), str, date) always wins; any other `<name>.csv` gets types inferred from its header and first 1 MiB (`i64` → `f64` → `str`, `date` → `str`; ADR-0007, `storage/csv/infer.rs`). A later value that does not fit is an error with a hint, never a silent NULL.
 
 ## Architecture
 ```
@@ -52,7 +52,7 @@ crates/engine/src/
             projection pushdown, filter pushdown, eager aggregation
   exec/     physical operators over column batches:
             scan, filter, project, hash_agg, hash_join, sort, limit
-  storage/  csv/ (chunker, field scanner, number parsers,
+  storage/  csv/ (chunker, field scanner, number parsers, infer.rs: schema inference,
             stream.rs: bounded-memory reader for non-seekable input; tested),
             cache/ (optional columnar cache)
   types/    values, NULL bitmaps, decimal as scaled i64

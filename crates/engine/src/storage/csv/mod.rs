@@ -12,9 +12,14 @@ use rayon::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 
+pub mod infer;
 pub mod stream;
 
 pub const BATCH_ROWS: usize = 64 * 1024;
+
+/// Suffix for a value that does not fit an inferred type (ADR-0007): the sample did not see such a value.
+pub const INFERRED_HINT: &str =
+    " (the column type was inferred from the first 1 MiB of the file; declare the table in schema.toml to override)";
 
 /// Bytes a reader scans: a memory map (file mode) or an owned block (stream mode).
 pub type Data = Arc<dyn AsRef<[u8]> + Send + Sync>;
@@ -35,6 +40,8 @@ pub struct CsvReader {
     outs: Vec<(String, Ty)>,
     row: u64,
     path: String,
+    /// Appended to value-parse errors; non-empty when the column types were inferred (ADR-0007).
+    hint: &'static str,
     /// No `"` byte anywhere after the header: rows are exactly the `\n`-delimited lines and fields the
     /// `,`-delimited pieces, so the quote-aware splitter can be replaced by the fast path below.
     /// Always false for the `--no-opt` reference path.
@@ -262,6 +269,7 @@ pub struct CsvSource {
     outs: Vec<(String, Ty)>,
     path: String,
     reference: bool,
+    hint: &'static str,
 }
 
 impl CsvSource {
@@ -320,7 +328,16 @@ impl CsvSource {
             return Err(err!("{pstr}: schema column '{}' missing from header", table.cols[si].0));
         }
         let outs = needed.iter().map(|&i| table.cols[i].clone()).collect();
-        Ok(CsvSource { data, data_start: pos, ncols: header.len(), wanted, outs, path: pstr, reference })
+        Ok(CsvSource {
+            data,
+            data_start: pos,
+            ncols: header.len(),
+            wanted,
+            outs,
+            path: pstr,
+            reference,
+            hint: if table.inferred { INFERRED_HINT } else { "" },
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -352,6 +369,7 @@ impl CsvSource {
             outs: self.outs.clone(),
             row: row0,
             path: self.path.clone(),
+            hint: self.hint,
             quote_free,
             last_needed,
         }
@@ -474,7 +492,7 @@ impl CsvReader {
                 if f < self.ncols {
                     if let Some(o) = self.wanted[f] {
                         bs[o].push(&d[fld.start..fld.end], fld.esc).map_err(|m| {
-                            err!("{}: row {}, column '{}': {m}", self.path, self.row + 2, self.outs[o].0)
+                            err!("{}: row {}, column '{}': {m}{}", self.path, self.row + 2, self.outs[o].0, self.hint)
                         })?;
                     }
                 }
@@ -548,7 +566,7 @@ impl CsvReader {
                     let e = if f + 1 == self.ncols { line.len() } else { p + memchr(b',', &line[p..]).unwrap() };
                     if let Some(o) = self.wanted[f] {
                         bs[o].push(&line[p..e], false).map_err(|m| {
-                            err!("{}: row {}, column '{}': {m}", self.path, self.row + 2, self.outs[o].0)
+                            err!("{}: row {}, column '{}': {m}{}", self.path, self.row + 2, self.outs[o].0, self.hint)
                         })?;
                     }
                     p = e + 1;

@@ -24,7 +24,7 @@ Every row that was 🟡 or ❌, and every row that was ⛔, now has a probe. The
 |---|---|---|---|---|---|
 | SRC-01 | Table = `<name>.csv` in `--data DIR`, typed by `schema.toml` | ✅ | P0 | S | difftest |
 | SRC-02 | `--stdin NAME` binds a pipe to one table | ✅ once per query, probe side only | P0 | file mode | `tests/stream.rs` |
-| SRC-03 | Schema inference from a header and a sample (no `schema.toml`) | ❌ (`cannot read .../schema.toml`; `surface_audit::schema_level_rows_are_errors`) | **P0** | H | inference corpus: 30 files with known types |
+| SRC-03 | Schema inference from a header and a sample (no `schema.toml`) | 🟡 first cut (ADR-0007): first 1 MiB, `i64`/`f64`/`date`/`str`, no `bool`/`decimal`/mid-file samples/`DESCRIBE`; `tests/infer.rs`, `surface_audit::schema_level_rows_are_errors` | **P0** | H | inference corpus: 30 files with known types |
 | SRC-04 | `--table name=path` for a file outside `--data` | ❌ (`--table` is the pretty-print flag; `--table t=path "SQL"` **succeeds and ignores `t=path`**, see BUG-0001; `surface_audit_cli::cli_only_rows_fail_today`) | P0 | S | CLI test |
 | SRC-05 | Explicit schema file `--schema FILE` overriding inference | ❌ (`unknown option --schema`; `surface_audit_cli::cli_only_rows_fail_today`) | P0 | H | override test |
 | SRC-06 | gzip and zstd input, detected by magic bytes | ❌ (works through an external `gunzip` pipe; gzip bytes on `--stdin` fail with `header column '...' is not in schema.toml`; `surface_audit_cli::cli_only_rows_fail_today`) | P1 | file mode | same rows from plain, `.gz`, `.zst`, pipe |

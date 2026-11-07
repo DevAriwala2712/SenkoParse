@@ -416,11 +416,21 @@ fn schema_level_rows_are_errors() {
         let e = rejected_in(&d, "SELECT id, b FROM t", Fails::Generic);
         eprintln!("{id}: column type {ty}\n    -> {e}");
     }
-    // SRC-03 no schema.toml, no inference
+    // SRC-03 no schema.toml: types are inferred (ADR-0007); `true` and a timestamp have no inferable type, so `b`
+    // is a string. Supported since the inference change; detailed tests in tests/infer.rs.
     let d = mk("noschema", None);
-    let e = rejected_in(&d, "SELECT id FROM t", Fails::Generic);
-    assert!(e.contains("schema.toml"), "{e}");
-    eprintln!("SRC-03: no schema.toml\n    -> {e}");
+    for no_opt in [false, true] {
+        let o = engine::Options { no_opt, ..Default::default() };
+        let (_, rows) = engine::run_collect_opts(&d, "SELECT id, b FROM t ORDER BY id", &o).unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                vec![engine::types::Value::I64(1), engine::types::Value::Str("true".into())],
+                vec![engine::types::Value::I64(2), engine::types::Value::Str("2026-01-01T10:00:00Z".into())],
+            ]
+        );
+    }
+    eprintln!("SRC-03: no schema.toml -> inferred (id i64, b str)");
 }
 
 // ----------------------------------------------------------------------------- ⛔ rows: rejected by name

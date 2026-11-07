@@ -32,6 +32,7 @@ flowchart LR
 | M6 columnar cache (`--cache`) | ⛔ dropped for now | helps repeat runs only; cold path must be fast; stale-cache risk |
 | Spill (Grace hash partitioning) | ⚪ deferred, only if time remains after P5 | robustness, not speed |
 | **Phase 0** audit and baseline (production-readiness §12, tasks 0.1-0.7) | 🟡 all tasks committed on branch `phase-0-audit`; gate not met until CI has run on GitHub (needs a push) | [sql-surface.md audit](sql-surface.md#phase-0-audit-2026-11-02), `tests/surface_audit.rs`, `.github/workflows/ci.yml` |
+| **Phase 1, task 1.1** schema inference (SRC-03) | 🟡 first cut 2026-11-07: plain CSVs run without `schema.toml`; header + first 1 MiB, `i64`/`f64`/`date`/`str`; `schema.toml` wins; late misfit is an error with a hint. Not yet: `DESCRIBE`, `bool`/`decimal` inference, mid-file samples, inference corpus | [ADR-0007](adr/0007-schema-inference.md), `tests/infer.rs` (5 tests, mutation-checked: I64+F64→I64 widening fails 3 tests), regression C07a now returns rows |
 
 ## Streaming plan ([CLAUDE.md](../CLAUDE.md))
 

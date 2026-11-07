@@ -284,7 +284,8 @@ fn print_schema(s: &Session, which: Option<&str>) {
                 }
                 found = true;
                 let t = &c.tables[&n];
-                println!("{n}  ({})", t.path.display());
+                let how = if t.inferred { ", types inferred" } else { "" };
+                println!("{n}  ({}{how})", t.path.display());
                 for (col, ty) in &t.cols {
                     println!("  {col:<10} {ty:?}");
                 }

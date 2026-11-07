@@ -1,7 +1,7 @@
 -- Demo regression candidates (docs/production-readiness.md §2.3, Phase 0 task 0.2).
 --
 -- The aggregation a judge ran during the demo failed, and its exact text was not recorded. Every candidate
--- below is a query shape that fails today. `tests/regression.rs` runs each statement and checks that it fails
+-- below is a query shape that failed at the demo; most still fail today. `tests/regression.rs` runs each statement and checks that it fails
 -- with exactly the `expect-error` text, so this file records what a user sees today.
 --
 -- TODO R-0001: the real demo query is not known yet. When it is recovered (ask the teammates who were at the
@@ -10,7 +10,8 @@
 -- becomes a regression test that must return the oracle's answer.
 --
 -- Format: directive comments, then one statement ending in `;`.
---   -- id: <name>          -- data: default | no-schema          -- expect-error: <exact error text>
+--   -- id: <name>          -- data: default | no-schema
+--   -- expect-error: <exact error text>   or   -- expect-rows: <row> | <row> ...  (fields joined by `,`, NULL as `NULL`)
 -- `{data}` in an expected error stands for the data directory. Tables (data = default):
 --   t(col str, x i64, a i64, b i64)
 
@@ -44,9 +45,10 @@ SELECT AVG(DISTINCT x) FROM t;
 -- expect-error: syntax error at offset 23: expected ')', found ','
 SELECT COUNT(DISTINCT a, b) FROM t;
 
--- id: C07a the judge's own CSV, no schema.toml
+-- id: C07a the judge's own CSV, no schema.toml (supported since ADR-0007 schema inference; rows checked by hand
+--   against SQLite semantics: the all-empty row forms one NULL group)
 -- data: no-schema
--- expect-error: cannot read {data}/schema.toml: No such file or directory (os error 2)
+-- expect-rows: a,2 | b,1 | NULL,1
 SELECT col, COUNT(*) FROM t GROUP BY col;
 
 -- id: C07b the judge's own CSV, table not in schema.toml

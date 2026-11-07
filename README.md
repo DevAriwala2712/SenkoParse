@@ -67,7 +67,9 @@ python3 scripts/gen_data.py --rows 1e7            # ~1.2 GB into data/ (tables x
   "SELECT s.id4, SUM(x.v1) FROM x JOIN small s ON x.id1 = s.id1 GROUP BY s.id4 ORDER BY 1"
 ```
 
-Schema comes from a `schema.toml` next to the CSVs. There is no type sniffing:
+Any `<name>.csv` in the data directory is table `<name>`. Column types are inferred from the header and the first
+1 MiB (`i64`, `f64`, `date`, else `str`; see [ADR-0007](docs/adr/0007-schema-inference.md)). To fix a type (for
+example `decimal(2)`, or `str` to keep leading zeros), declare the table in a `schema.toml`; it always wins:
 
 ```toml
 [x]                      # file is x.csv

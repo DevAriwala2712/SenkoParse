@@ -113,7 +113,7 @@ Snapshot of `main` at `f80c6e0`. Full per-feature detail is in [sql-surface.md](
 
 | Rank | Gap | Effect on a user | Section |
 |---|---|---|---|
-| 1 | `schema.toml` is required; no type inference | Any new CSV fails with `cannot read schema.toml` or `unknown table` | [9](#9-input-robustness-and-security), SRC-03 |
+| 1 | ~~`schema.toml` is required; no type inference~~ First cut done 2026-11-07 (ADR-0007): a plain CSV runs; still missing `DESCRIBE`, `bool`/`decimal` inference, mid-file samples | Was: any new CSV failed with `cannot read schema.toml` or `unknown table` | [9](#9-input-robustness-and-security), SRC-03 |
 | 2 | No `SELECT DISTINCT`, `SUM(DISTINCT)`, `CASE`, `IN`, `BETWEEN`, `LIKE`, `OFFSET`, scalar functions (`ROUND`, `LOWER`, ...) | Common judge and user queries are rejected (with a clear error, which is the right failure) | [4](#4-sql-surface) |
 | 3 | No memory budget, no spill; sort is fully in memory; join build side fully in memory | High-cardinality GROUP BY or a big join over a pipe can exhaust RAM | [6](#6-architecture-and-memory-model) |
 | 4 | File-mode RSS is about the input size (mmap) | "Bounded memory" is false for file mode as RSS is usually measured | [memory-model.md](memory-model.md) |
