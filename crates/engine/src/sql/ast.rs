@@ -37,6 +37,13 @@ pub enum Ast {
     Neg(Box<Ast>),
     Not(Box<Ast>),
     IsNull(Box<Ast>, bool),
+    /// `x [NOT] LIKE 'pattern'` (pattern is a string literal; `%` any run, `_` one character, case-sensitive).
+    Like(Box<Ast>, String, bool),
+    /// Searched CASE; a simple `CASE x WHEN v ...` is desugared by the parser to `WHEN x = v`.
+    Case {
+        whens: Vec<(Ast, Ast)>,
+        else_: Option<Box<Ast>>,
+    },
     /// `arg == None` means `COUNT(*)`.
     Agg {
         func: AggFunc,

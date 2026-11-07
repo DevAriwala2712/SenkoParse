@@ -14,6 +14,7 @@ Every row that was 🟡 or ❌, and every row that was ⛔, now has a probe. The
 
 - **Probes.** `tests/surface_audit.rs` (SQL and schema rows; `cargo test --test surface_audit`) and `crates/cli/tests/surface_audit_cli.rs` (flag rows; `cargo test -p qe --test surface_audit_cli`). Supported features are compared with SQLite under the [correctness.md](correctness.md) rules on five configurations: default, `--no-opt`, 3 threads with 16-byte chunks and the forced partitioned merge, and stream mode (1-byte reads, 7-byte blocks) with and without `--no-opt`. Rejected features must fail with no rows and the same text on the default and `--no-opt` paths; the probe pins whether the text contains `unsupported`. Two `should_panic` probes show that the comparison fails on a missing row and on a value off by 1e-6.
 - **Counts** (105 rows): ✅ 39 · ⛔ 30 (24 feature rows + the 6 FN rows) · ❌ 32 (28 feature rows + 4 *capability* rows: JN-12, AGG-17, ORD-06, ORD-07) · *mixed* 4 (FLT-04, AGG-16, ORD-05, CMP-07).
+- **Changed since the audit (Phase 1, 2026-11-07):** SRC-03 ❌ → 🟡 (schema inference, first cut, task 1.1); AGG-03, AGG-04 ⛔ → ✅ (task 1.3); FLT-04 mixed → ✅, FLT-05, FLT-06, CND-01, CND-02 ⛔ → ✅ (task 1.4; `ESCAPE` and non-literal LIKE patterns stay ⛔). The counts line above is the audit snapshot.
 - **Changed by the audit.** 🟡 → ✅: TYP-10, PRJ-06 (`SELECT *`, task 0.4), FLT-01 (`!=`), JN-04, JN-05, JN-07. ⛔ → ❌: FLT-07 (`ILIKE` is a syntax error), FLT-08 (`... is not supported`, not the `unsupported` form), SRC-09, SRC-10 (clear stream errors, not the `unsupported` form). ⛔ → *mixed*: FLT-04 (`NOT IN` is a syntax error), ORD-05 (`LIMIT m, n` is a syntax error). ❌ → *mixed*: AGG-16 (`ROLLUP`, `CUBE` are rejected as `unsupported function`), CMP-07 (`ROW_NUMBER()` likewise).
 - **Wrong answers found: none** among supported features. **Bugs found: 1.** BUG-0001: a second positional argument silently replaces the first, so `qe --table t=other.csv "SQL"` (SRC-04) and `qe "SELECT a" "SELECT b"` exit 0 and run only the last argument (`surface_audit_cli::bug_0001_extra_positional_argument_is_an_error`, `#[ignore]`, fails today). Not fixed in Phase 0.
 - **Side observation.** The first version of the audit rewrote its CSV files while another test thread had them memory-mapped and the test process died with SIGBUS. That is the [§9.1](production-readiness.md#91-isolation-the-one-acid-property-that-applies) risk (a file truncated under an mmap scan) reproduced by accident; the test now writes its data once.
@@ -70,9 +71,9 @@ Every row that was 🟡 or ❌, and every row that was ⛔, now has a probe. The
 | FLT-01 | `= <> != < <= > >=` | ✅ (`!=` too: `surface_audit::flt01_not_equal_bang`) | P0 | S | difftest |
 | FLT-02 | `AND`, `OR`, `NOT` with three-valued logic | ✅ | P0 | S | 3VL truth-table test |
 | FLT-03 | `IS NULL`, `IS NOT NULL` | ✅ | P0 | S | difftest |
-| FLT-04 | `IN (list)`, `NOT IN (list)` with NULL semantics | mixed: ⛔ `IN (list)`; ❌ `NOT IN` (`expected operator, found 'NOT'`) (`surface_audit::rejected_by_name`) | **P0** | S | NULL-in-list cases |
-| FLT-05 | `BETWEEN`, `NOT BETWEEN` | ⛔ | **P0** | S | bounds inclusive |
-| FLT-06 | `LIKE`, `NOT LIKE`, `ESCAPE` | ⛔ | **P0** | S (case rule differs, see semantics) | pattern table incl. `%`, `_`, escapes, Unicode |
+| FLT-04 | `IN (list)`, `NOT IN (list)` with NULL semantics | ✅ desugared to an OR of equalities, so NULL in the list or on the left gives NULL as in SQL (`surface_audit::flt04_flt05_flt06_cnd01_cnd02_in_between_like_case`, difftest); `IN (SELECT ...)` stays ⛔ (CMP-02) | **P0** | S | NULL-in-list cases |
+| FLT-05 | `BETWEEN`, `NOT BETWEEN` | ✅ desugared to `>= AND <=` (same test, difftest) | **P0** | S | bounds inclusive |
+| FLT-06 | `LIKE`, `NOT LIKE`, `ESCAPE` | ✅ `LIKE`/`NOT LIKE` with a literal pattern, case-sensitive, `_` = one UTF-8 character (same test, difftest, unit tests in `exec/eval.rs`); ⛔ `ESCAPE` and non-literal patterns | **P0** | S (case rule differs, see semantics) | pattern table incl. `%`, `_`, escapes, Unicode |
 | FLT-07 | `ILIKE` | ❌ (was ⛔; audit: syntax error at `ILIKE`; `surface_audit::rejected_by_name`) | P1 | D | — |
 | FLT-08 | Comparing boolean expressions (`(a>b) = (c>d)`) | ❌ (was ⛔; audit: `comparing boolean expressions is not supported`, clear but not the `unsupported SQL feature` form; `surface_audit::rejected_by_name`) | P2 | S | — |
 | FLT-09 | `IS DISTINCT FROM` | ❌ (`expected NULL, found 'DISTINCT'`; `surface_audit::not_recognised_sql_gives_a_generic_error`) | P1 | D | NULL-safe equality |
@@ -81,8 +82,8 @@ Every row that was 🟡 or ❌, and every row that was ⛔, now has a probe. The
 
 | ID | Feature | Today | Pri | Oracle | Acceptance test |
 |---|---|---|---|---|---|
-| CND-01 | `CASE WHEN ... THEN ... ELSE ... END` (searched) | ⛔ | **P0** | S | type unification, missing ELSE = NULL |
-| CND-02 | Simple `CASE x WHEN v THEN ...` | ⛔ | P0 | S | — |
+| CND-01 | `CASE WHEN ... THEN ... ELSE ... END` (searched) | ✅ results widened like arithmetic; branches evaluated only on the rows that reach them (same test, difftest) | **P0** | S | type unification, missing ELSE = NULL |
+| CND-02 | Simple `CASE x WHEN v THEN ...` | ✅ desugared to `WHEN x = v` (same test) | P0 | S | — |
 | CND-03 | `COALESCE` | ⛔ (unsupported function) | **P0** | S | — |
 | CND-04 | `NULLIF` | ⛔ | P1 | S | — |
 | CND-05 | `GREATEST`, `LEAST` | ⛔ | P1 | D | NULL rule documented |

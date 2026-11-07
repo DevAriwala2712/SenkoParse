@@ -22,7 +22,7 @@ SELECT DISTINCT col FROM t;
 
 -- id: C02 conditional aggregation with CASE
 -- data: default
--- expect-error: unsupported SQL feature: CASE
+-- expect-rows: 2
 SELECT SUM(CASE WHEN x > 0 THEN 1 ELSE 0 END) FROM t;
 
 -- id: C03 scalar function around an aggregate
@@ -58,17 +58,17 @@ SELECT region, SUM(amount) FROM sales GROUP BY region;
 
 -- id: C08a IN list before GROUP BY
 -- data: default
--- expect-error: unsupported SQL feature: IN
+-- expect-rows: a,1
 SELECT col, COUNT(*) FROM t WHERE x IN (1, 2) GROUP BY col;
 
 -- id: C08b BETWEEN before GROUP BY
 -- data: default
--- expect-error: unsupported SQL feature: BETWEEN
+-- expect-rows: a,1
 SELECT col, COUNT(*) FROM t WHERE x BETWEEN 1 AND 2 GROUP BY col;
 
 -- id: C08c LIKE before GROUP BY
 -- data: default
--- expect-error: unsupported SQL feature: LIKE
+-- expect-rows: a,2
 SELECT col, COUNT(*) FROM t WHERE col LIKE 'a%' GROUP BY col;
 
 -- id: C09 OFFSET after ORDER BY ... LIMIT

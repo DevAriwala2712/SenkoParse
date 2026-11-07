@@ -105,7 +105,7 @@ fn errors_are_loud_and_specific() {
     assert!(err(&d, "SELECT id FROM t").contains("unterminated"));
     let d = dir("errs4", &[("t.csv", "id,s,v\n1,a,2\n")], T);
     for (sql, want) in [
-        ("SELECT id FROM t WHERE s LIKE 'a%'", "LIKE"),
+        ("SELECT id FROM t WHERE s LIKE s", "LIKE with a pattern that is not a string literal"),
         ("SELECT id FROM t RIGHT JOIN t u ON t.id = u.id", "RIGHT"),
         ("SELECT nope FROM t", "unknown column"),
         ("SELECT id FROM missing", "unknown table"),

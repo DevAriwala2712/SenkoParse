@@ -27,13 +27,23 @@ pub enum BExpr {
     Not(Box<BExpr>),
     IsNull(Box<BExpr>, bool),
     Cast(Box<BExpr>, Ty),
+    /// `x LIKE pattern` (negated if the flag is set); `x` is a string.
+    Like(Box<BExpr>, String, bool),
+    /// Searched CASE: the first true condition picks its result; none -> `else_` (a NULL literal if absent).
+    /// All results already cast to `ty`.
+    Case(Vec<(BExpr, BExpr)>, Box<BExpr>, Ty),
 }
 
 impl BExpr {
     pub fn ty(&self) -> Ty {
         match self {
-            BExpr::Col(_, t) | BExpr::Lit(_, t) | BExpr::Bin(_, _, _, t) | BExpr::Neg(_, t) | BExpr::Cast(_, t) => *t,
-            BExpr::Not(_) | BExpr::IsNull(..) => Ty::Bool,
+            BExpr::Col(_, t)
+            | BExpr::Lit(_, t)
+            | BExpr::Bin(_, _, _, t)
+            | BExpr::Neg(_, t)
+            | BExpr::Cast(_, t)
+            | BExpr::Case(_, _, t) => *t,
+            BExpr::Not(_) | BExpr::IsNull(..) | BExpr::Like(..) => Ty::Bool,
         }
     }
 
@@ -45,7 +55,16 @@ impl BExpr {
                 a.cols(out);
                 b.cols(out);
             }
-            BExpr::Neg(a, _) | BExpr::Not(a) | BExpr::IsNull(a, _) | BExpr::Cast(a, _) => a.cols(out),
+            BExpr::Neg(a, _) | BExpr::Not(a) | BExpr::IsNull(a, _) | BExpr::Cast(a, _) | BExpr::Like(a, ..) => {
+                a.cols(out)
+            }
+            BExpr::Case(w, e, _) => {
+                for (c, r) in w {
+                    c.cols(out);
+                    r.cols(out);
+                }
+                e.cols(out);
+            }
         }
     }
 
@@ -58,6 +77,10 @@ impl BExpr {
             BExpr::Not(a) => BExpr::Not(Box::new(a.shift(by))),
             BExpr::IsNull(a, n) => BExpr::IsNull(Box::new(a.shift(by)), *n),
             BExpr::Cast(a, t) => BExpr::Cast(Box::new(a.shift(by)), *t),
+            BExpr::Like(a, p, n) => BExpr::Like(Box::new(a.shift(by)), p.clone(), *n),
+            BExpr::Case(w, e, t) => {
+                BExpr::Case(w.iter().map(|(c, r)| (c.shift(by), r.shift(by))).collect(), Box::new(e.shift(by)), *t)
+            }
         }
     }
 }

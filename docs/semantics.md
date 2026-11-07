@@ -183,7 +183,7 @@ Known places where SenkoParse deliberately differs from SQLite, DuckDB or Postgr
 | `/` on integers | `f64` result | integer division | `f64` result (`//` is integer division) | integer division |
 | `x / 0` | NULL | NULL | NULL for `/` on floats; **verify** integers | error |
 | NULLs in ASC order | first | first | last | last |
-| `LIKE` case sensitivity | case-sensitive (planned; an explicit exception to D-1, because `ILIKE` exists for the other case); the difftest sets `PRAGMA case_sensitive_like = ON` | case-insensitive for ASCII by default | case-sensitive | case-sensitive |
+| `LIKE` case sensitivity | case-sensitive (implemented, task 1.4; an explicit exception to D-1, because `ILIKE` exists for the other case); the difftest sets `PRAGMA case_sensitive_like = ON` | case-insensitive for ASCII by default | case-sensitive | case-sensitive |
 | NaN | a value, sorts after +∞ (planned) | stored as NULL | sorts after +∞ | sorts after +∞ |
 | Integer overflow in `SUM` | error | error (`integer overflow`; `TOTAL()` returns REAL instead) | error, or widens to `HUGEINT` depending on type (**verify**) | error |
 | Empty quoted CSV field `""` | NULL (default) | n/a | empty string by default | n/a |

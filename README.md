@@ -160,7 +160,7 @@ Full tour: [docs/architecture.md](docs/architecture.md).
 
 ### Supported SQL
 
-`SELECT [DISTINCT]` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)`, `SUM(DISTINCT col)`, `AVG(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`, comparisons, `IS [NOT] NULL` · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
+`SELECT [DISTINCT]` columns or a bare `*` (every column of the FROM tables, in table order), expressions (`+ - * /`, comparisons) and aggregates `COUNT(*)`, `COUNT(col)`, `SUM`, `AVG`, `MIN`, `MAX`, `COUNT(DISTINCT col)`, `SUM(DISTINCT col)`, `AVG(DISTINCT col)` · `FROM` one or more CSV tables · `[INNER|LEFT] JOIN ... ON a = b [AND c = d]` · `WHERE` with `AND`/`OR`/`NOT`, comparisons, `IS [NOT] NULL`, `[NOT] IN (list)`, `[NOT] BETWEEN`, `[NOT] LIKE 'pattern'` (case-sensitive) · `CASE WHEN ... THEN ... [ELSE ...] END` and `CASE x WHEN v ...` anywhere an expression is allowed · `GROUP BY` · `HAVING` · `ORDER BY` · `LIMIT`.
 Not supported: `t.*`, `*` mixed with other items, `IN (SELECT ...)`, window functions, anything else. Per-feature state with the test for each: [docs/sql-surface.md](docs/sql-surface.md).
 
 ### Correctness rules the engine enforces

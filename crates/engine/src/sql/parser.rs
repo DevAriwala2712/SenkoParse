@@ -48,23 +48,8 @@ const RESERVED: &[&str] = &[
     "any",
 ];
 /// Keywords we recognise only to give a clear "unsupported" error.
-const UNSUPPORTED: &[&str] = &[
-    "right",
-    "full",
-    "cross",
-    "natural",
-    "union",
-    "intersect",
-    "except",
-    "like",
-    "in",
-    "between",
-    "case",
-    "offset",
-    "using",
-    "with",
-    "exists",
-];
+const UNSUPPORTED: &[&str] =
+    &["right", "full", "cross", "natural", "union", "intersect", "except", "offset", "using", "with", "exists"];
 
 pub struct Parser<'a> {
     src: &'a str,
@@ -286,6 +271,48 @@ impl<'a> Parser<'a> {
             self.expect_kw("null")?;
             return Ok(Ast::IsNull(Box::new(l), neg));
         }
+        // [NOT] IN / BETWEEN / LIKE
+        let kw_at = |p: &Self, k: usize, w: &str| matches!(&p.toks[(p.p + k).min(p.toks.len() - 1)].tok, Tok::Ident(s) if s == w);
+        let negated = kw_at(self, 0, "not") && ["in", "between", "like"].iter().any(|w| kw_at(self, 1, w));
+        if negated {
+            self.bump();
+        }
+        let wrap = |e: Ast| if negated { Ast::Not(Box::new(e)) } else { e };
+        if self.eat_kw("in") {
+            // `x IN (a, b)` is defined as `x = a OR x = b`; with NOT, `NOT (x = a OR x = b)`. This is exact SQL
+            // three-valued semantics: no match plus a NULL on either side gives NULL, not false.
+            self.expect_sym("(")?;
+            if self.is_kw("select") {
+                return Err(err!("unsupported SQL feature: IN (SELECT ...)"));
+            }
+            let mut e = Ast::Bin(AstOp::Eq, Box::new(l.clone()), Box::new(self.expr()?));
+            while self.eat_sym(",") {
+                let next = Ast::Bin(AstOp::Eq, Box::new(l.clone()), Box::new(self.expr()?));
+                e = Ast::Bin(AstOp::Or, Box::new(e), Box::new(next));
+            }
+            self.expect_sym(")")?;
+            return Ok(wrap(e));
+        }
+        if self.eat_kw("between") {
+            // `x BETWEEN a AND b` is defined as `x >= a AND x <= b` (bounds are not swapped when a > b, as in
+            // SQLite, PostgreSQL and DuckDB).
+            let lo = self.add_expr()?;
+            self.expect_kw("and")?;
+            let hi = self.add_expr()?;
+            let ge = Ast::Bin(AstOp::Ge, Box::new(l.clone()), Box::new(lo));
+            let le = Ast::Bin(AstOp::Le, Box::new(l), Box::new(hi));
+            return Ok(wrap(Ast::Bin(AstOp::And, Box::new(ge), Box::new(le))));
+        }
+        if self.eat_kw("like") {
+            let pat = match self.add_expr()? {
+                Ast::Str(s) => s,
+                _ => return Err(err!("unsupported SQL feature: LIKE with a pattern that is not a string literal")),
+            };
+            if self.is_kw("escape") {
+                return Err(err!("unsupported SQL feature: LIKE ... ESCAPE"));
+            }
+            return Ok(Ast::Like(Box::new(l), pat, negated));
+        }
         let op = match self.peek() {
             Tok::Sym("=") => AstOp::Eq,
             Tok::Sym("<>") => AstOp::Ne,
@@ -357,6 +384,10 @@ impl<'a> Parser<'a> {
                 self.bump();
                 Ok(Ast::Null)
             }
+            Tok::Ident(s) if s == "case" => {
+                self.bump();
+                self.case_expr()
+            }
             Tok::Ident(s) => {
                 if matches!(self.toks[self.p + 1].tok, Tok::Sym("(")) {
                     return self.func(&s);
@@ -371,6 +402,28 @@ impl<'a> Parser<'a> {
             _ => Err(self.unexpected("expression")),
         }
     }
+    /// After `CASE`. A simple CASE (`CASE x WHEN v THEN r`) becomes `WHEN x = v THEN r`, so a NULL `x` or `v`
+    /// never matches and falls through to ELSE, as SQL requires.
+    fn case_expr(&mut self) -> Result<Ast> {
+        let operand = if self.is_kw("when") { None } else { Some(self.expr()?) };
+        let mut whens = Vec::new();
+        while self.eat_kw("when") {
+            let c = self.expr()?;
+            let c = match &operand {
+                Some(x) => Ast::Bin(AstOp::Eq, Box::new(x.clone()), Box::new(c)),
+                None => c,
+            };
+            self.expect_kw("then")?;
+            whens.push((c, self.expr()?));
+        }
+        if whens.is_empty() {
+            return Err(self.unexpected("WHEN"));
+        }
+        let else_ = if self.eat_kw("else") { Some(Box::new(self.expr()?)) } else { None };
+        self.expect_kw("end")?;
+        Ok(Ast::Case { whens, else_ })
+    }
+
     fn func(&mut self, name: &str) -> Result<Ast> {
         let func = match name {
             "count" => AggFunc::Count,

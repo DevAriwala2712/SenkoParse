@@ -29,6 +29,14 @@ pub fn eval(e: &BExpr, b: &Batch) -> Result<Arc<Column>> {
             let (a, c) = (eval(l, b)?, eval(r, b)?);
             Arc::new(binary(*op, &a, &c)?)
         }
+        BExpr::Like(x, pat, negate) => {
+            let c = eval(x, b)?;
+            let ColData::Str(s) = &c.data else { unreachable!() };
+            let p = pat.as_bytes();
+            let v = (0..b.len).map(|i| !c.is_null(i) && like(s.get(i), p) != *negate).collect();
+            Arc::new(Column::new(ColData::Bool(v), c.nulls.clone()))
+        }
+        BExpr::Case(whens, else_, ty) => Arc::new(case(whens, else_, *ty, b)?),
     })
 }
 
@@ -220,4 +228,121 @@ pub fn cast(c: &Column, to: Ty) -> Result<Column> {
         }
     };
     Ok(Column::new(data, c.nulls.clone()))
+}
+
+/// UTF-8 sequence length from its first byte (1 for a stray continuation byte, so progress is guaranteed).
+#[inline]
+fn char_len(b: u8) -> usize {
+    match b {
+        0xF0..=0xFF => 4,
+        0xE0..=0xEF => 3,
+        0xC0..=0xDF => 2,
+        _ => 1,
+    }
+}
+
+/// SQL LIKE: `%` matches any run of characters (including none), `_` exactly one character (not one byte),
+/// everything else itself, case-sensitively (PostgreSQL and DuckDB; SQLite folds ASCII case by default, a
+/// dialect difference listed in docs/semantics.md). Greedy matching that backtracks only to the last `%`, which
+/// is complete for patterns without character classes: a later `%` subsumes any choice made by an earlier one.
+pub fn like(t: &[u8], p: &[u8]) -> bool {
+    let (mut ti, mut pi) = (0usize, 0usize);
+    let mut star: Option<(usize, usize)> = None; // (pattern index of the last %, text index it resumes from)
+    while ti < t.len() {
+        if pi < p.len() && p[pi] == b'%' {
+            star = Some((pi, ti));
+            pi += 1;
+        } else if pi < p.len() && p[pi] == b'_' {
+            ti = (ti + char_len(t[ti])).min(t.len());
+            pi += 1;
+        } else if pi < p.len() && p[pi] == t[ti] {
+            ti += 1;
+            pi += 1;
+        } else if let Some((sp, st)) = star {
+            let nt = (st + char_len(t[st])).min(t.len());
+            star = Some((sp, nt));
+            pi = sp + 1;
+            ti = nt;
+        } else {
+            return false;
+        }
+    }
+    while pi < p.len() && p[pi] == b'%' {
+        pi += 1;
+    }
+    pi == p.len()
+}
+
+/// Searched CASE. Each condition is evaluated only on the rows no earlier branch took, and each result only on
+/// the rows its condition selected, so an expression in a branch that is not taken cannot raise an error (for
+/// example an integer overflow), as SQL requires. A NULL condition counts as not true.
+fn case(whens: &[(BExpr, BExpr)], else_: &BExpr, ty: Ty, b: &Batch) -> Result<Column> {
+    let n = b.len;
+    let mut remaining: Vec<u32> = (0..n as u32).collect();
+    // per row: (branch, position in that branch's result column)
+    let mut pick: Vec<(u32, u32)> = vec![(u32::MAX, 0); n];
+    let mut results: Vec<Option<Arc<Column>>> = vec![None; whens.len() + 1];
+    let sub_of = |rows: &[u32]| -> Batch {
+        if rows.len() == n {
+            Batch { cols: b.cols.clone(), len: n }
+        } else {
+            b.take(rows)
+        }
+    };
+    for (k, (c, r)) in whens.iter().enumerate() {
+        if remaining.is_empty() {
+            break;
+        }
+        let sub = sub_of(&remaining);
+        let cc = eval(c, &sub)?;
+        let ColData::Bool(v) = &cc.data else { unreachable!() };
+        let hits: Vec<u32> = (0..remaining.len()).filter(|&j| v[j] && !cc.is_null(j)).map(|j| j as u32).collect();
+        if hits.is_empty() {
+            continue;
+        }
+        let rc = eval(r, &sub.take(&hits))?;
+        for (pos, &j) in hits.iter().enumerate() {
+            pick[remaining[j as usize] as usize] = (k as u32, pos as u32);
+        }
+        results[k] = Some(rc);
+        let mut hit = hits.iter().peekable();
+        let mut j = 0u32;
+        remaining.retain(|_| {
+            let taken = hit.peek().is_some_and(|&&h| h == j);
+            if taken {
+                hit.next();
+            }
+            j += 1;
+            !taken
+        });
+    }
+    if !remaining.is_empty() {
+        let ec = eval(else_, &sub_of(&remaining))?;
+        for (pos, &row) in remaining.iter().enumerate() {
+            pick[row as usize] = (whens.len() as u32, pos as u32);
+        }
+        results[whens.len()] = Some(ec);
+    }
+    let mut out = Column::empty(ty);
+    for &(k, pos) in &pick {
+        out.push_from(results[k as usize].as_ref().expect("every row picked a branch"), pos as usize);
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::like;
+
+    #[test]
+    fn like_patterns() {
+        let t = |s: &str, p: &str| like(s.as_bytes(), p.as_bytes());
+        assert!(t("abc", "abc") && !t("abc", "ab") && !t("ab", "abc"));
+        assert!(t("abc", "a%") && t("abc", "%c") && t("abc", "%b%") && t("abc", "%") && t("", "%"));
+        assert!(t("abc", "a_c") && !t("ac", "a_c") && t("abc", "___") && !t("abc", "__"));
+        assert!(t("aXbXc", "a%b%c") && !t("aXbXd", "a%b%c") && t("abcbc", "%bc") && t("mississippi", "%iss%pi"));
+        assert!(!t("ABC", "abc") && !t("", "_") && t("", "") && !t("a", ""));
+        // `_` is one character, not one byte
+        assert!(t("é", "_") && t("aéb", "a_b") && !t("é", "__") && t("naïve café", "%ï%é"));
+    }
 }

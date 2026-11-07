@@ -77,6 +77,8 @@ fn write_data() -> PathBuf {
 
 fn sqlite() -> Connection {
     let conn = Connection::open_in_memory().unwrap();
+    // LIKE is case-sensitive here (PostgreSQL, DuckDB); SQLite folds ASCII case unless told not to.
+    conn.execute_batch("PRAGMA case_sensitive_like = ON;").unwrap();
     for (name, cols, body) in TABLES {
         let defs: Vec<String> = cols
             .iter()
@@ -350,6 +352,40 @@ fn agg03_agg04_distinct() {
 }
 
 #[test]
+fn flt04_flt05_flt06_cnd01_cnd02_in_between_like_case() {
+    // FLT-04 IN lists (desugared to an OR of equalities: NULL on either side gives NULL, as in SQL)
+    supported("SELECT id FROM t WHERE id IN (1, 3, 99) ORDER BY id");
+    supported("SELECT id FROM t WHERE v NOT IN (10, 30) ORDER BY id");
+    supported("SELECT id FROM t WHERE v NOT IN (10, NULL)");
+    supported("SELECT id FROM t WHERE s IN ('a', 'c') ORDER BY id");
+    supported("SELECT id FROM t WHERE p IN (1.5, 2) ORDER BY id");
+    supported("SELECT s, COUNT(*) FROM t WHERE d IN ('2026-01-01', '2026-01-03') GROUP BY s");
+    // FLT-05 BETWEEN (inclusive; reversed bounds match nothing)
+    supported("SELECT id FROM t WHERE v BETWEEN 10 AND 40 ORDER BY id");
+    supported("SELECT id FROM t WHERE v NOT BETWEEN 10 AND 40 ORDER BY id");
+    supported("SELECT id FROM t WHERE f BETWEEN -1 AND 1.25 ORDER BY id");
+    supported("SELECT id FROM t WHERE v BETWEEN 40 AND 10");
+    supported("SELECT s, SUM(v) FROM t GROUP BY s HAVING SUM(v) BETWEEN 0 AND 60");
+    // FLT-06 LIKE, case-sensitive (the oracle runs with PRAGMA case_sensitive_like = ON)
+    supported("SELECT id FROM t WHERE s LIKE 'a%' ORDER BY id");
+    supported("SELECT id FROM t WHERE s NOT LIKE '%k' ORDER BY id");
+    supported("SELECT id FROM t WHERE s LIKE 'o_k'");
+    supported("SELECT id FROM t WHERE s LIKE '_' ORDER BY id");
+    supported("SELECT id FROM t WHERE s LIKE 'A%'");
+    supported("SELECT id FROM t WHERE s LIKE '%''%'");
+    // CND-01 searched CASE, CND-02 simple CASE
+    supported("SELECT id, CASE WHEN v > 30 THEN 'big' WHEN v > 0 THEN 'small' ELSE 'none' END FROM t");
+    supported("SELECT id, CASE WHEN v > 30 THEN v END FROM t");
+    supported("SELECT id, CASE WHEN f > 0 THEN p ELSE v END FROM t");
+    supported("SELECT id, CASE v WHEN 10 THEN 1 WHEN 30 THEN 3 END FROM t");
+    supported("SELECT id, CASE s WHEN NULL THEN 1 ELSE 0 END FROM t");
+    supported("SELECT SUM(CASE WHEN v > 20 THEN 1 ELSE 0 END), AVG(CASE WHEN s = 'a' THEN f END) FROM t");
+    supported("SELECT CASE WHEN v > 20 THEN 'hi' ELSE 'lo' END AS b, COUNT(*) FROM t GROUP BY b");
+    supported("SELECT id FROM t WHERE CASE WHEN v IS NULL THEN 0 ELSE v END > 20 ORDER BY id");
+    supported("SELECT s, CASE WHEN COUNT(*) > 1 THEN 'many' ELSE 'one' END FROM t GROUP BY s");
+}
+
+#[test]
 fn flt01_not_equal_bang() {
     supported("SELECT id FROM t WHERE v != 30");
     supported("SELECT id FROM t WHERE s != 'a' ORDER BY id");
@@ -454,7 +490,7 @@ fn schema_level_rows_are_errors() {
 // ----------------------------------------------------------------------------- ⛔ rows: rejected by name
 
 /// The rows marked ⛔ before the audit, re-checked so that the table cannot drift. Most say `unsupported`; the
-/// probes pinned `Generic` (FLT-04 `NOT IN`, FLT-07, FLT-08, ORD-05 `LIMIT m, n`) were ⛔ in the table but the
+/// probes pinned `Generic` (FLT-07, FLT-08, ORD-05 `LIMIT m, n`) were ⛔ in the table but the
 /// audit found a generic error, so sql-surface.md now marks them ❌.
 #[test]
 fn rejected_by_name() {
@@ -462,14 +498,10 @@ fn rejected_by_name() {
     check_all(&[
         ("TYP-08", "SELECT CAST(id AS str) FROM t", Unsupported),
         ("PRJ-08", "SELECT *, id FROM t", Unsupported),
-        ("FLT-04", "SELECT id FROM t WHERE id IN (1, 2)", Unsupported),
-        ("FLT-04", "SELECT id FROM t WHERE id NOT IN (1, 2)", Generic),
-        ("FLT-05", "SELECT id FROM t WHERE id BETWEEN 1 AND 3", Unsupported),
-        ("FLT-06", "SELECT id FROM t WHERE s LIKE 'a%'", Unsupported),
+        ("FLT-06", "SELECT id FROM t WHERE s LIKE 'a!%' ESCAPE '!'", Unsupported),
+        ("FLT-06", "SELECT id FROM t WHERE s LIKE s", Unsupported),
         ("FLT-07", "SELECT id FROM t WHERE s ILIKE 'a%'", Generic),
         ("FLT-08", "SELECT id FROM t WHERE (v > 1) = (id > 1)", Generic),
-        ("CND-01", "SELECT CASE WHEN v > 10 THEN 1 ELSE 0 END FROM t", Unsupported),
-        ("CND-02", "SELECT CASE v WHEN 10 THEN 1 END FROM t", Unsupported),
         ("CND-03", "SELECT COALESCE(v, 0) FROM t", Unsupported),
         ("CND-04", "SELECT NULLIF(v, 10) FROM t", Unsupported),
         ("CND-05", "SELECT GREATEST(v, id) FROM t", Unsupported),
