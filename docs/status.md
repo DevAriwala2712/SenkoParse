@@ -1,6 +1,6 @@
 # Status board
 
-One page that says what is true **today** (2026-11-02, after Phase 0 of [production-readiness.md](production-readiness.md#phase-0-audit-and-baseline-about-3-4-days)), how we know, and what is open.
+One page that says what is true **today** (2026-11-07, Phase 0 merged, Phase 1 started; performance rows as of the interim 1e8 run of [production-readiness.md](production-readiness.md#phase-0-audit-and-baseline-about-3-4-days)), how we know, and what is open.
 Legend: ✅ verified · 🟡 partly verified or narrow scope · ⚪ not done / not measured · ❌ failed
 
 ```mermaid
@@ -9,9 +9,9 @@ flowchart LR
     classDef part fill:#fdf0cc,stroke:#eda100,color:#0b0b0b
     classDef todo fill:#ececea,stroke:#8a8984,color:#0b0b0b
     M1["M1<br/>correct baseline"]:::done --> M2["M2<br/>parallel scan"]:::done
-    M2 --> M3["M3<br/>int-key table done"]:::part
-    M3 --> M4["P1-P5<br/>diagnose, adaptive chunks,<br/>dense join, dense GROUP BY,<br/>re-benchmark"]:::todo
-    M1 --> S1["Stream: verify"]:::done --> S2["Stream: memory proof<br/>(one query)"]:::part --> S3["Stream: demo"]:::todo --> S4["IN (SELECT ...)"]:::todo
+    M2 --> M3["M3<br/>int-key table + int join"]:::part
+    M3 --> M4["P1-P5<br/>P1, P3 done; P2, P4 reverted;<br/>P5 interim only"]:::part
+    M1 --> S1["Stream: verify"]:::done --> S2["Stream: memory proof<br/>(one query)"]:::part --> S3["Stream: demo"]:::done --> S4["IN (SELECT ...)"]:::todo
     M4 --> SP["Spill<br/>(only if time)"]:::todo
 ```
 
@@ -23,15 +23,15 @@ flowchart LR
 | M2 parallel chunked scan, fixed-order merge | ✅ | [EXP-003](experiments/003-parallel-chunked-scan.md) |
 | Quote-free fast path | ✅ | [EXP-002](experiments/002-quote-free-fast-path.md) |
 | Integer-key aggregation, partition-wise merge | ✅ merged | [EXP-004](experiments/004-integer-key-aggregation.md) |
-| **P1** Diagnose superlinear scaling (Q3, Q5, Q9 at 1e8): merge cost vs memory pressure | ⚪ **next, ~30 min** | cheapest test: `--chunk-bytes 256MiB` on Q3/Q5, scaling curve 1e7/3e7/1e8, `vm_stat` swap |
-| **P2** Adaptive aggregation chunk size (from file size and group-count estimate, never from thread count) | ⚪ planned, ~45 min | merge work grows with chunks x groups; [BENCHMARKS](../BENCHMARKS.md) 1e8 section |
-| **P3** Dense-key direct-addressed join (replaces M3 "rest"): array build + probe when the integer key range is small, hash fallback otherwise | ⚪ planned, ~2 h | Q9 is 16x slower than DuckDB; Q8 1.6x |
-| **P4** Dense-key GROUP BY and bitset `COUNT(DISTINCT)` for small-range integer keys | ⚪ planned, ~1 h | Q3 3.0x, Q4 3.6x, Q5 3.5x |
-| **P5** Re-run 1e8 benchmark (warm + cold), update claims C12/C13 | ⚪ planned, ~45 min | needs `sudo purge` for cold |
+| **P1** Diagnose superlinear scaling (Q3, Q5, Q9) | ✅ done (EXP-006): per-chunk table allocation explains about a quarter of Q3/Q5 and none of Q9; Q9 is the join table; Q5 is the per-chunk DISTINCT sets (EXP-009 profile) | [EXP-006](experiments/006-scaling-diagnosis.md), [EXP-009 profile](experiments/009-q5-profile.md) |
+| **P2** Adaptive chunk size / aggregation table reuse | ⚪ adaptive chunk size not built; ❌ the table-reuse alternative was reverted (EXP-007): kill rule not met on the container (-11% on Q3); patch kept, not re-measured on the M3 Pro | [EXP-007](experiments/007-table-reuse.md) |
+| **P3** Integer-keyed parallel join table | ✅ merged (EXP-008, re-measured on M3 Pro in EXP-008b): Q9 at 1e8 85.4 s → 14.6 s; now 2.95x DuckDB, Q8 1.37x. Direct-address array and probe prefetch still open | [EXP-008](experiments/008-int-join.md), [EXP-008b](experiments/008b-int-join-mac.md), [BENCHMARKS](../BENCHMARKS.md) "Interim, after EXP-008" |
+| **P4** Per-worker `COUNT(DISTINCT)` sets | ❌ reverted (EXP-009 step 2): Q5 1.47x at 5e7, below the 1.5x bar; next: inline `i64` keys / bitset (ADR-0004) | [EXP-009](experiments/009-distinct-per-thread.md) |
+| **P5** Final 1e8 benchmark (warm + cold), claims C12/C13 | 🟡 interim warm run done 2026-11-01 (qe ties or wins Q1-Q3, Q6, Q7 at 0.75-0.91x; loses Q4 4.04x, Q5 3.13x, Q9 2.95x, Q8 1.37x); cold run not done (needs `sudo purge`) | [BENCHMARKS](../BENCHMARKS.md) "Interim, after EXP-008" |
 | M4 eager aggregation, M5 fused loops | ⛔ dropped for now | Q7 already ties DuckDB (0.95x); scan-bound queries tie (Q1, Q2, Q6) |
 | M6 columnar cache (`--cache`) | ⛔ dropped for now | helps repeat runs only; cold path must be fast; stale-cache risk |
 | Spill (Grace hash partitioning) | ⚪ deferred, only if time remains after P5 | robustness, not speed |
-| **Phase 0** audit and baseline (production-readiness §12, tasks 0.1-0.7) | 🟡 all tasks committed on branch `phase-0-audit`; gate not met until CI has run on GitHub (needs a push) | [sql-surface.md audit](sql-surface.md#phase-0-audit-2026-11-02), `tests/surface_audit.rs`, `.github/workflows/ci.yml` |
+| **Phase 0** audit and baseline (production-readiness §12, tasks 0.1-0.7) | ✅ merged in PR #7 (2026-11-02), CI green on ubuntu and macos; gate met | [sql-surface.md audit](sql-surface.md#phase-0-audit-2026-11-02), `tests/surface_audit.rs`, `.github/workflows/ci.yml` |
 | **Phase 1, task 1.1** schema inference (SRC-03) | 🟡 first cut 2026-11-07: plain CSVs run without `schema.toml`; header + first 1 MiB, `i64`/`f64`/`date`/`str`; `schema.toml` wins; late misfit is an error with a hint. Not yet: `DESCRIBE`, `bool`/`decimal` inference, mid-file samples, inference corpus | [ADR-0007](adr/0007-schema-inference.md), `tests/infer.rs` (5 tests, mutation-checked: I64+F64→I64 widening fails 3 tests), regression C07a now returns rows |
 
 ## Streaming plan ([CLAUDE.md](../CLAUDE.md))
